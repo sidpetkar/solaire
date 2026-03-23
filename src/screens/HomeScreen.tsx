@@ -61,7 +61,7 @@ export default function HomeScreen() {
     if (!enableScrollHide) return;
     setBarsHidden(true);
     if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-    scrollTimerRef.current = setTimeout(() => setBarsHidden(false), 600);
+    scrollTimerRef.current = setTimeout(() => setBarsHidden(false), 50);
   }, [enableScrollHide]);
 
   return (
@@ -70,8 +70,8 @@ export default function HomeScreen() {
         <MasonryGrid images={images} onDoubleTap={handleDoubleTap} onScroll={handleScroll} />
 
         <div
-          className={`absolute top-0 inset-x-0 z-10 fade-down pointer-events-none transition-transform duration-500 ease-out ${
-            barsHidden ? '-translate-y-full' : 'translate-y-0'
+          className={`absolute top-0 inset-x-0 z-10 fade-down pointer-events-none transition-transform ease-out ${
+            barsHidden ? '-translate-y-full duration-500' : 'translate-y-0 duration-300'
           }`}
           style={{ height: 140 }}
         >
@@ -88,8 +88,8 @@ export default function HomeScreen() {
         </div>
 
         <div
-          className={`absolute bottom-0 inset-x-0 z-10 fade-up pointer-events-none transition-transform duration-500 ease-out ${
-            barsHidden ? 'translate-y-full' : 'translate-y-0'
+          className={`absolute bottom-0 inset-x-0 z-10 fade-up pointer-events-none transition-transform ease-out ${
+            barsHidden ? 'translate-y-full duration-500' : 'translate-y-0 duration-300'
           }`}
           style={{ height: 260 }}
         >
