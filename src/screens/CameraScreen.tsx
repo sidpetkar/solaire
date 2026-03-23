@@ -177,7 +177,7 @@ export default function CameraScreen() {
 
         <div className="flex items-center justify-between px-8 pb-10 pt-3">
           {captured ? (
-            <button onClick={handleRetake} className="text-[11px] tracking-[0.15em] text-accent/80 w-20">
+            <button onClick={handleRetake} className="text-base tracking-widest text-accent/80 w-20">
               Retake
             </button>
           ) : (
@@ -185,7 +185,7 @@ export default function CameraScreen() {
           )}
           <ShutterButton onCapture={handleCapture} disabled={captured} />
           {captured ? (
-            <button onClick={handleSave} className="text-[11px] tracking-[0.15em] text-accent font-medium w-20 text-right">
+            <button onClick={handleSave} className="text-base tracking-widest text-accent font-medium w-20 text-right">
               Save
             </button>
           ) : (

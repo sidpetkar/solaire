@@ -62,11 +62,14 @@ export default function MasonryGrid({ images, onDoubleTap, onScroll }: Props) {
 
   return (
     <div
-      className="flex-1 overflow-y-auto overflow-x-hidden px-1.5 pt-24 pb-64"
+      className="flex-1 overflow-y-auto overflow-x-hidden pt-24 pb-64"
       style={{ touchAction: 'pan-y' }}
       onScroll={onScroll}
     >
-      <div className="flex gap-1 items-start">
+      <p className="text-[12px] tracking-wider text-white/50 normal-case pb-2 px-4">
+        Double-tap an image to edit!
+      </p>
+      <div className="flex gap-1 items-start px-1.5">
         {columns.map((col, ci) => (
           <div key={ci} className="flex-1 flex flex-col gap-1">
             {col.map((img) => (

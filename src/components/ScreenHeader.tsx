@@ -8,7 +8,10 @@ interface Props {
 
 export default function ScreenHeader({ left, right, center }: Props) {
   return (
-    <header className="shrink-0 flex items-center justify-between px-5 pt-6 pb-6">
+    <header
+      className="shrink-0 flex items-center justify-between px-4 pb-6"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)' }}
+    >
       <div className="min-w-[60px] flex items-center justify-start">
         {left}
       </div>
