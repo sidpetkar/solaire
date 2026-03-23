@@ -9,7 +9,10 @@ import FilterStrip from '../components/FilterStrip';
 import AspectRatioSelector from '../components/AspectRatioSelector';
 import ShutterButton from '../components/ShutterButton';
 import { useCamera } from '../hooks/useCamera';
-import { useImageStore } from '../hooks/useImageStore';
+import { useImageStore, downloadBlob } from '../hooks/useImageStore';
+import { shouldWatermark } from '../hooks/useWatermarkPref';
+import { useAuth } from '../context/AuthContext';
+import { applyWatermark } from '../engine/watermark';
 import { initLUTs } from '../engine/lutManager';
 import { ASPECT_RATIOS } from '../types';
 import type { AspectRatio, LUTMeta, ParsedLUT } from '../types';
@@ -19,6 +22,8 @@ export default function CameraScreen() {
   const canvasHandle = useRef<WebGLCanvasHandle>(null);
   const { videoRef, start, stop, switchCamera } = useCamera();
   const { saveImage } = useImageStore();
+  const { user, isGuest } = useAuth();
+  const doWatermark = shouldWatermark(user?.email, isGuest);
 
   const [activeTab, setActiveTab] = useState('all presets');
   const [activeLutId, setActiveLutId] = useState<string | null>(null);
@@ -115,12 +120,20 @@ export default function CameraScreen() {
     if (!handle?.renderer) return;
     try {
       const blob = await handle.renderer.toBlob();
-      await saveImage(blob, activeLutId ?? undefined);
+      const id = await saveImage(blob, activeLutId ?? undefined);
+      const filename = `KAPTURA_${id}.jpg`;
+
+      if (doWatermark) {
+        const wmBlob = await applyWatermark(blob);
+        downloadBlob(wmBlob, filename);
+      } else {
+        downloadBlob(blob, filename);
+      }
       navigate('/');
     } catch (err) {
       console.error('Save failed:', err);
     }
-  }, [activeLutId, saveImage, navigate]);
+  }, [activeLutId, saveImage, navigate, doWatermark]);
 
   const handleSwitchCamera = useCallback(async () => {
     const handle = canvasHandle.current;

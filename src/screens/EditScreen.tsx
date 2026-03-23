@@ -17,7 +17,8 @@ import { useImageStore, downloadBlob } from '../hooks/useImageStore';
 import { useFolderStore, type FolderMeta } from '../hooks/useFolderStore';
 import { metaStore } from '../store/db';
 import { useCategoryPrefs } from '../hooks/useCategoryPrefs';
-import { useWatermarkPref } from '../hooks/useWatermarkPref';
+import { shouldWatermark } from '../hooks/useWatermarkPref';
+import { useAuth } from '../context/AuthContext';
 import { applyWatermark } from '../engine/watermark';
 import { initLUTs } from '../engine/lutManager';
 import { DEFAULT_BLUR_PARAMS, type AdjustParams, type BlurParams } from '../engine/adjustments';
@@ -48,7 +49,8 @@ export default function EditScreen() {
   const { saveImage, getFullImage, deleteImage } = useImageStore();
   const { disabledCategories } = useCategoryPrefs();
   const prefsKey = disabledCategories.size;
-  const { watermarkEnabled } = useWatermarkPref();
+  const { user, isGuest } = useAuth();
+  const doWatermark = shouldWatermark(user?.email, isGuest);
 
   const [activePanel, setActivePanel] = useState<EditorPanel>('filters');
 
@@ -304,7 +306,7 @@ export default function EditScreen() {
       const id = await saveImage(blob, activeLutId ?? undefined, existingId);
       const filename = `KAPTURA_${id}.jpg`;
 
-      if (withWatermark && watermarkEnabled) {
+      if (withWatermark && doWatermark) {
         const wmBlob = await applyWatermark(blob);
         downloadBlob(wmBlob, filename);
       } else {
@@ -314,16 +316,16 @@ export default function EditScreen() {
     } catch (err) {
       console.error('Save failed:', err);
     }
-  }, [activeLutId, saveImage, navigate, sourceImg, existingId, watermarkEnabled]);
+  }, [activeLutId, saveImage, navigate, sourceImg, existingId, doWatermark]);
 
   const handleDownload = useCallback(() => {
     setShowMenu(false);
-    if (!watermarkEnabled) {
+    if (!doWatermark) {
       handleConfirmDownload(false);
       return;
     }
     setShowSaveModal(true);
-  }, [watermarkEnabled, handleConfirmDownload]);
+  }, [doWatermark, handleConfirmDownload]);
 
   const handleMoveToFolder = useCallback(async (folder: FolderMeta) => {
     setShowFolderPicker(false);
