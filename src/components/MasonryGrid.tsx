@@ -8,9 +8,10 @@ interface GridImage {
 interface Props {
   images: GridImage[];
   onDoubleTap?: (id: string) => void;
+  onScroll?: () => void;
 }
 
-export default function MasonryGrid({ images, onDoubleTap }: Props) {
+export default function MasonryGrid({ images, onDoubleTap, onScroll }: Props) {
   const lastTap = useRef<{ id: string; time: number }>({ id: '', time: 0 });
 
   const handleTap = useCallback(
@@ -63,6 +64,7 @@ export default function MasonryGrid({ images, onDoubleTap }: Props) {
     <div
       className="flex-1 overflow-y-auto overflow-x-hidden px-1.5 pt-24 pb-64"
       style={{ touchAction: 'pan-y' }}
+      onScroll={onScroll}
     >
       <div className="flex gap-1 items-start">
         {columns.map((col, ci) => (

@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowCounterClockwise, ArrowClockwise, Trash, Check, X } from '@phosphor-icons/react';
+import { ArrowUUpLeft, ArrowUUpRight, Trash, Check, X } from '@phosphor-icons/react';
 import ScreenShell from '../components/ScreenShell';
 import ScreenHeader from '../components/ScreenHeader';
 import WebGLCanvas, { type WebGLCanvasHandle } from '../components/WebGLCanvas';
@@ -53,6 +53,7 @@ export default function EditScreen() {
   const [cropActive, setCropActive] = useState(false);
   const [blurActive, setBlurActive] = useState(false);
   const [adjustEditing, setAdjustEditing] = useState(false);
+  const [effectsEditing, setEffectsEditing] = useState(false);
 
   const [history, setHistory] = useState<HistoryEntry[]>([
     { lutId: null, meta: null, parsed: null, effectParams: {}, adjustParams: {}, blurParams: { ...DEFAULT_BLUR_PARAMS } },
@@ -384,26 +385,37 @@ export default function EditScreen() {
         }
         center={
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleUndo}
-              disabled={!canUndo}
-              className={`p-1 transition-opacity ${canUndo ? 'text-accent' : 'text-accent/30'}`}
-            >
-              <ArrowCounterClockwise size={20} weight="bold" />
-            </button>
-            <button
-              onClick={handleDeleteImage}
-              className="p-1 text-accent"
-            >
-              <Trash size={20} weight="bold" />
-            </button>
-            <button
-              onClick={handleRedo}
-              disabled={!canRedo}
-              className={`p-1 transition-opacity ${canRedo ? 'text-accent' : 'text-accent/30'}`}
-            >
-              <ArrowClockwise size={20} weight="bold" />
-            </button>
+            {history.length > 1 ? (
+              <>
+                <button
+                  onClick={handleUndo}
+                  disabled={!canUndo}
+                  className={`p-1 transition-opacity ${canUndo ? 'text-accent' : 'text-accent/30'}`}
+                >
+                  <ArrowUUpLeft size={20} weight="bold" />
+                </button>
+                <button
+                  onClick={handleDeleteImage}
+                  className="p-1 text-accent"
+                >
+                  <Trash size={20} weight="bold" />
+                </button>
+                <button
+                  onClick={handleRedo}
+                  disabled={!canRedo}
+                  className={`p-1 transition-opacity ${canRedo ? 'text-accent' : 'text-accent/30'}`}
+                >
+                  <ArrowUUpRight size={20} weight="bold" />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleDeleteImage}
+                className="p-1 text-accent"
+              >
+                <Trash size={20} weight="bold" />
+              </button>
+            )}
           </div>
         }
         right={
@@ -535,24 +547,27 @@ export default function EditScreen() {
                 handleEffectsChange(params);
                 commitEffects(params);
               }}
+              onEditingChange={setEffectsEditing}
             />
-            <div className="flex items-center justify-between px-5 py-4 border-t border-white/5">
-              <button
-                onClick={() => setActivePanel('filters')}
-                className="text-base tracking-widest text-muted/60 hover:text-muted transition-colors"
-              >
-                Filters
-              </button>
-              <button className="text-base tracking-widest text-amber-400 border-b border-amber-400 pb-0.5">
-                FXs
-              </button>
-              <button
-                onClick={() => setActivePanel('adjust')}
-                className="text-base tracking-widest text-muted/60 hover:text-muted transition-colors"
-              >
-                Adjust
-              </button>
-            </div>
+            {!effectsEditing && (
+              <div className="flex items-center justify-between px-5 py-4 border-t border-white/5">
+                <button
+                  onClick={() => setActivePanel('filters')}
+                  className="text-base tracking-widest text-muted/60 hover:text-muted transition-colors"
+                >
+                  Filters
+                </button>
+                <button className="text-base tracking-widest text-amber-400 border-b border-amber-400 pb-0.5">
+                  FXs
+                </button>
+                <button
+                  onClick={() => setActivePanel('adjust')}
+                  className="text-base tracking-widest text-muted/60 hover:text-muted transition-colors"
+                >
+                  Adjust
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div key="adjust" className="animate-panel-fade">

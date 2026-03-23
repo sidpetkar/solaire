@@ -21,6 +21,7 @@ const ICON_MAP: Record<string, ReactElement> = {
 };
 
 const TILE_SIZE = 76;
+const STRIP_HEIGHT = 92;
 
 interface Props {
   adjustParams: AdjustParams;
@@ -130,7 +131,10 @@ export default function AdjustPanel({
     if (editingDef.type === 'blur') {
       return (
         <div className="animate-panel-fade">
-          <div className="px-5 py-6 space-y-3 animate-panel-slide-up">
+          <div
+            className="px-5 space-y-3 animate-panel-slide-up flex flex-col justify-center"
+            style={{ minHeight: STRIP_HEIGHT }}
+          >
             <div className="flex justify-center gap-4 mb-2">
               <button
                 onClick={() => handleBlurModeToggle('circular')}
@@ -191,7 +195,10 @@ export default function AdjustPanel({
 
     return (
       <div className="animate-panel-fade">
-        <div className="px-5 py-6 space-y-3 animate-panel-slide-up">
+        <div
+          className="px-5 space-y-3 animate-panel-slide-up flex flex-col justify-center"
+          style={{ minHeight: STRIP_HEIGHT }}
+        >
           {editingDef.params.map((p) => (
             <div key={p.key} className="flex items-center gap-3">
               <span className="text-[11px] text-muted tracking-wider w-16 shrink-0 text-right">
@@ -233,7 +240,7 @@ export default function AdjustPanel({
   // Tool strip (horizontal, separated by dividers)
   return (
     <div className="animate-panel-fade">
-      <div className="flex px-1 py-3 overflow-x-auto" style={{ touchAction: 'pan-x' }}>
+      <div className="flex px-1 overflow-x-auto items-center" style={{ height: STRIP_HEIGHT, touchAction: 'pan-x' }}>
         {ADJUST_TOOLS.map((tool, i) => {
           const active = isToolActive(tool.id);
           return (
@@ -243,7 +250,7 @@ export default function AdjustPanel({
               className={`shrink-0 flex flex-col items-center justify-center gap-1.5 ${
                 i < ADJUST_TOOLS.length - 1 ? 'border-r border-white/8' : ''
               }`}
-              style={{ width: TILE_SIZE, height: 64 }}
+              style={{ width: TILE_SIZE, height: 68 }}
             >
               <span className={active ? 'text-amber-400' : 'text-accent/70'}>
                 {ICON_MAP[tool.icon] ?? <Sun size={22} weight="duotone" />}

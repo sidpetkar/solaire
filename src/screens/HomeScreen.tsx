@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GearSix, SquaresFour, Camera, FolderOpen } from '@phosphor-icons/react';
 import ScreenShell from '../components/ScreenShell';
@@ -7,11 +7,15 @@ import MasonryGrid from '../components/MasonryGrid';
 import { useImageStore } from '../hooks/useImageStore';
 import { initLUTs } from '../engine/lutManager';
 
+const SCROLL_HIDE_THRESHOLD = 10;
+
 export default function HomeScreen() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const { images, importImages } = useImageStore();
+  const [barsHidden, setBarsHidden] = useState(false);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { initLUTs(); }, []);
 
@@ -51,12 +55,26 @@ export default function HomeScreen() {
     [navigate],
   );
 
+  const enableScrollHide = images.length >= SCROLL_HIDE_THRESHOLD;
+
+  const handleScroll = useCallback(() => {
+    if (!enableScrollHide) return;
+    setBarsHidden(true);
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => setBarsHidden(false), 600);
+  }, [enableScrollHide]);
+
   return (
     <ScreenShell>
       <div className="h-full flex flex-col relative">
-        <MasonryGrid images={images} onDoubleTap={handleDoubleTap} />
+        <MasonryGrid images={images} onDoubleTap={handleDoubleTap} onScroll={handleScroll} />
 
-        <div className="absolute top-0 inset-x-0 z-10 fade-down pointer-events-none" style={{ height: 140 }}>
+        <div
+          className={`absolute top-0 inset-x-0 z-10 fade-down pointer-events-none transition-transform duration-500 ease-out ${
+            barsHidden ? '-translate-y-full' : 'translate-y-0'
+          }`}
+          style={{ height: 140 }}
+        >
           <div className="pointer-events-auto">
             <ScreenHeader
               left={<h1 className="text-lg font-medium tracking-wider normal-case">Welcome Sid,</h1>}
@@ -69,7 +87,12 @@ export default function HomeScreen() {
           </div>
         </div>
 
-        <div className="absolute bottom-0 inset-x-0 z-10 fade-up pointer-events-none" style={{ height: 260 }}>
+        <div
+          className={`absolute bottom-0 inset-x-0 z-10 fade-up pointer-events-none transition-transform duration-500 ease-out ${
+            barsHidden ? 'translate-y-full' : 'translate-y-0'
+          }`}
+          style={{ height: 260 }}
+        >
           <div className="pointer-events-auto flex items-center justify-center gap-10 pt-32 pb-10">
             <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-2">
               <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-lg">

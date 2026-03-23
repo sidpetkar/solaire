@@ -56,7 +56,7 @@ for (const filePath of filesToUpload) {
 
   try {
     execSync(
-      `npx wrangler r2 object put "${BUCKET}/${objectKey}" -f "${filePath}" --ct "${ct}"`,
+      `npx wrangler r2 object put "${BUCKET}/${objectKey}" --remote -f "${filePath}" --ct "${ct}"`,
       { stdio: 'pipe' },
     );
     uploaded++;

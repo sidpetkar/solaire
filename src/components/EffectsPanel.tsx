@@ -9,12 +9,15 @@ const ICON_MAP: Record<string, ReactElement> = {
   Rainbow: <Rainbow size={24} weight="duotone" />,
 };
 
+const FX_STRIP_HEIGHT = 101;
+
 interface Props {
   activeEffects: EffectParams;
   onChange: (params: EffectParams) => void;
+  onEditingChange?: (editing: boolean) => void;
 }
 
-export default function EffectsPanel({ activeEffects, onChange }: Props) {
+export default function EffectsPanel({ activeEffects, onChange, onEditingChange }: Props) {
   const [editingEffect, setEditingEffect] = useState<string | null>(null);
   const [pendingValues, setPendingValues] = useState<EffectValues>({});
 
@@ -26,12 +29,14 @@ export default function EffectsPanel({ activeEffects, onChange }: Props) {
     if (activeEffects[effectId]) {
       setEditingEffect(effectId);
       setPendingValues({ ...activeEffects[effectId] });
+      onEditingChange?.(true);
     } else {
       const defaults = getDefaultValues(effectId);
       const next = { ...activeEffects, [effectId]: defaults };
       onChange(next);
       setEditingEffect(effectId);
       setPendingValues(defaults);
+      onEditingChange?.(true);
     }
   }
 
@@ -57,16 +62,21 @@ export default function EffectsPanel({ activeEffects, onChange }: Props) {
       onChange({ ...activeEffects, [editingEffect]: pendingValues });
     }
     setEditingEffect(null);
+    onEditingChange?.(false);
   }
 
   function cancelEdit() {
     setEditingEffect(null);
+    onEditingChange?.(false);
   }
 
   if (editingDef && editingEffect) {
     return (
       <div className="animate-panel-fade">
-        <div className="px-5 pt-4 pb-2 space-y-3 animate-panel-slide-up">
+        <div
+          className="px-5 space-y-3 animate-panel-slide-up flex flex-col justify-center"
+          style={{ minHeight: FX_STRIP_HEIGHT }}
+        >
           {editingDef.params.map((p) => (
             <div key={p.key} className="flex items-center gap-3">
               <span className="text-[11px] text-muted tracking-wider w-16 shrink-0 text-right">
@@ -115,7 +125,10 @@ export default function EffectsPanel({ activeEffects, onChange }: Props) {
 
   return (
     <div className="animate-panel-fade">
-      <div className="grid grid-cols-3 gap-2 px-4 py-4">
+      <div
+        className="grid grid-cols-3 gap-2 px-4 items-center"
+        style={{ height: FX_STRIP_HEIGHT }}
+      >
         {EFFECTS.map((fx) => {
           const isActive = !!activeEffects[fx.id];
           return (

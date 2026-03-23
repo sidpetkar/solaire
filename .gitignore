@@ -3,3 +3,5 @@ dist/
 public/luts/
 *.local
 .env
+.wrangler/
+temp-manifest.json
