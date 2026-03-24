@@ -90,6 +90,7 @@ export class WebGLRenderer {
     if (!gl) throw new Error('WebGL2 not supported');
     this.gl = gl;
 
+    // Float extensions only needed for FBOs in multi-pass, not for LUT textures
     gl.getExtension('EXT_color_buffer_float');
     gl.getExtension('OES_texture_float_linear');
 
@@ -127,6 +128,10 @@ export class WebGLRenderer {
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
     gl.bindTexture(gl.TEXTURE_2D, this.imageTexture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    if (import.meta.env.DEV) {
+      const err = gl.getError();
+      if (err !== gl.NO_ERROR) console.warn('[WebGL] uploadImage error:', err);
+    }
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
   }
 
@@ -142,19 +147,24 @@ export class WebGLRenderer {
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-    const rgba = new Float32Array(lut.size * lut.size * lut.size * 4);
-    for (let i = 0; i < lut.size * lut.size * lut.size; i++) {
-      rgba[i * 4 + 0] = lut.data[i * 3 + 0];
-      rgba[i * 4 + 1] = lut.data[i * 3 + 1];
-      rgba[i * 4 + 2] = lut.data[i * 3 + 2];
-      rgba[i * 4 + 3] = 1.0;
+    const count = lut.size * lut.size * lut.size;
+    const rgba = new Uint8Array(count * 4);
+    for (let i = 0; i < count; i++) {
+      rgba[i * 4 + 0] = Math.round(Math.min(1, Math.max(0, lut.data[i * 3 + 0])) * 255);
+      rgba[i * 4 + 1] = Math.round(Math.min(1, Math.max(0, lut.data[i * 3 + 1])) * 255);
+      rgba[i * 4 + 2] = Math.round(Math.min(1, Math.max(0, lut.data[i * 3 + 2])) * 255);
+      rgba[i * 4 + 3] = 255;
     }
 
     gl.texImage3D(
-      gl.TEXTURE_3D, 0, gl.RGBA32F,
+      gl.TEXTURE_3D, 0, gl.RGBA8,
       lut.size, lut.size, lut.size,
-      0, gl.RGBA, gl.FLOAT, rgba,
+      0, gl.RGBA, gl.UNSIGNED_BYTE, rgba,
     );
+    const err = gl.getError();
+    if (err !== gl.NO_ERROR) {
+      console.warn('[WebGL] uploadLUT texImage3D error:', err, `(size=${lut.size})`);
+    }
     this.hasLut = true;
   }
 
@@ -488,6 +498,14 @@ export class WebGLRenderer {
     }
   }
 
+  getMaxTextureSize(): number {
+    return this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number;
+  }
+
+  isContextLost(): boolean {
+    return this.gl.isContextLost();
+  }
+
   resize(width: number, height: number) {
     this.canvas.width = width;
     this.canvas.height = height;
@@ -502,6 +520,34 @@ export class WebGLRenderer {
         quality,
       );
     });
+  }
+
+  async exportBlob(
+    source: HTMLImageElement | HTMLCanvasElement,
+    fullWidth: number,
+    fullHeight: number,
+    type = 'image/jpeg',
+    quality = 0.92,
+  ): Promise<Blob> {
+    const prevW = this.canvas.width;
+    const prevH = this.canvas.height;
+
+    const maxTex = this.getMaxTextureSize();
+    const exportScale = Math.min(1, maxTex / fullWidth, maxTex / fullHeight);
+    const exportW = Math.round(fullWidth * exportScale);
+    const exportH = Math.round(fullHeight * exportScale);
+
+    this.canvas.width = exportW;
+    this.canvas.height = exportH;
+    this.uploadImage(source);
+    const blob = await this.toBlob(type, quality);
+
+    this.canvas.width = prevW;
+    this.canvas.height = prevH;
+    this.uploadImage(source);
+    this.render();
+
+    return blob;
   }
 
   destroy() {

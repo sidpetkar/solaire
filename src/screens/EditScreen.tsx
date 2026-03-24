@@ -99,12 +99,19 @@ export default function EditScreen() {
       const container = containerRef.current;
       const maxW = container ? container.clientWidth - 32 : 800;
       const maxH = container ? container.clientHeight - 32 : 600;
-      const scale = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight);
 
-      handle.canvas.width = img.naturalWidth;
-      handle.canvas.height = img.naturalHeight;
-      handle.canvas.style.width = `${Math.round(img.naturalWidth * scale)}px`;
-      handle.canvas.style.height = `${Math.round(img.naturalHeight * scale)}px`;
+      const maxTex = handle.renderer.getMaxTextureSize();
+      const previewMax = Math.min(2048, maxTex);
+      const gpuScale = Math.min(1, previewMax / img.naturalWidth, previewMax / img.naturalHeight);
+      const canvasW = Math.round(img.naturalWidth * gpuScale);
+      const canvasH = Math.round(img.naturalHeight * gpuScale);
+
+      const displayScale = Math.min(1, maxW / canvasW, maxH / canvasH);
+
+      handle.canvas.width = canvasW;
+      handle.canvas.height = canvasH;
+      handle.canvas.style.width = `${Math.round(canvasW * displayScale)}px`;
+      handle.canvas.style.height = `${Math.round(canvasH * displayScale)}px`;
 
       handle.renderer.uploadImage(img);
       handle.renderer.render();
@@ -130,6 +137,9 @@ export default function EditScreen() {
         if (cancelled) return;
         setSourceImg(img);
         renderToCanvas(img);
+      };
+      img.onerror = (e) => {
+        console.error('Failed to load image for editor:', e);
       };
       img.src = url;
     }
@@ -285,10 +295,11 @@ export default function EditScreen() {
   const handleSaveToApp = useCallback(async () => {
     setShowMenu(false);
     const handle = canvasHandle.current;
-    if (!handle?.renderer) return;
+    if (!handle?.renderer || !sourceImg) return;
     try {
-      if (sourceImg) handle.renderer.uploadImage(sourceImg);
-      const blob = await handle.renderer.toBlob();
+      const blob = await handle.renderer.exportBlob(
+        sourceImg, sourceImg.naturalWidth, sourceImg.naturalHeight,
+      );
       await saveImage(blob, activeLutId ?? undefined, existingId);
       navigate('/');
     } catch (err) {
@@ -299,10 +310,11 @@ export default function EditScreen() {
   const handleConfirmDownload = useCallback(async (withWatermark: boolean) => {
     setShowSaveModal(false);
     const handle = canvasHandle.current;
-    if (!handle?.renderer) return;
+    if (!handle?.renderer || !sourceImg) return;
     try {
-      if (sourceImg) handle.renderer.uploadImage(sourceImg);
-      const blob = await handle.renderer.toBlob();
+      const blob = await handle.renderer.exportBlob(
+        sourceImg, sourceImg.naturalWidth, sourceImg.naturalHeight,
+      );
       const id = await saveImage(blob, activeLutId ?? undefined, existingId);
       const filename = `SOLAIRE_${id}.jpg`;
 

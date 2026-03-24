@@ -78,8 +78,8 @@ async function loadThumbBundle() {
     const resp = await fetch(url);
     if (!resp.ok) return;
     thumbBundleBuffer = await resp.arrayBuffer();
-  } catch {
-    // thumb bundle not available; thumbnails will load individually
+  } catch (e) {
+    console.warn('[LUT] thumb-bundle load failed:', e);
   }
 }
 
@@ -110,7 +110,7 @@ export async function loadLUT(meta: LUTMeta): Promise<ParsedLUT> {
         idbPut(meta.id, parsed).catch(() => {});
         return parsed;
       }
-    } catch { /* fallback to .cube */ }
+    } catch (e) { console.warn('[LUT] .bin load failed, falling back to .cube:', meta.id, e); }
   }
 
   // Fallback to .cube text
@@ -224,8 +224,8 @@ async function doInit() {
     assignShortCodes();
 
     if (thumbBundlePromise) await thumbBundlePromise;
-  } catch {
-    // manifest not found
+  } catch (e) {
+    console.warn('[LUT] manifest load failed:', e);
   }
   initialized = true;
 }
