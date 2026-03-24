@@ -20,7 +20,7 @@ const SKIP_FOLDERS = new Set([
 let thumbRenderer: WebGLRenderer | null = null;
 let thumbCanvas: HTMLCanvasElement | null = null;
 
-const THUMB_LUT_SIZE = 17;
+const THUMB_LUT_SIZE = 8;
 const THUMB_ENTRY_BYTES = THUMB_LUT_SIZE ** 3 * 3 * 4;
 let thumbBundleBuffer: ArrayBuffer | null = null;
 let thumbBundlePromise: Promise<void> | null = null;
@@ -362,5 +362,6 @@ export async function generateThumbnail(
   renderer.uploadImage(cropped);
   renderer.uploadLUT(lut);
   renderer.render();
+  renderer.flush();
   return thumbCanvas.toDataURL('image/jpeg', 0.6);
 }

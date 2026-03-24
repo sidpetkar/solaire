@@ -21,7 +21,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const BUCKET = 'solaire';
+const BUCKET = 'kaptura';
 const LUTS_DIR = path.resolve(__dirname, '..', 'public', 'luts');
 
 function walk(dir) {

@@ -498,6 +498,10 @@ export class WebGLRenderer {
     }
   }
 
+  flush() {
+    this.gl.finish();
+  }
+
   getMaxTextureSize(): number {
     return this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number;
   }

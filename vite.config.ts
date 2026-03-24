@@ -94,7 +94,7 @@ export default defineConfig({
             urlPattern: /\/luts\/thumb-bundle\.bin$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'lut-thumb-bundle',
+              cacheName: 'lut-thumb-bundle-v2',
               expiration: { maxEntries: 2 },
             },
           },
@@ -102,7 +102,7 @@ export default defineConfig({
             urlPattern: /\/luts\/bin\/.*\.bin$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'lut-bin-cache',
+              cacheName: 'lut-bin-cache-v2',
               expiration: { maxEntries: 500 },
             },
           },
@@ -110,7 +110,7 @@ export default defineConfig({
             urlPattern: /r2\.dev\/luts\/bin\/.*\.bin$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'lut-bin-cache-r2',
+              cacheName: 'lut-bin-cache-r2-v2',
               expiration: { maxEntries: 500 },
             },
           },
@@ -118,7 +118,7 @@ export default defineConfig({
             urlPattern: /r2\.dev\/luts\/thumb-bundle\.bin$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'lut-thumb-bundle-r2',
+              cacheName: 'lut-thumb-bundle-r2-v2',
               expiration: { maxEntries: 2 },
             },
           },
@@ -126,7 +126,7 @@ export default defineConfig({
             urlPattern: /\/luts\/.*\.cube$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'lut-cache',
+              cacheName: 'lut-cache-v2',
               expiration: { maxEntries: 200 },
             },
           },
@@ -134,7 +134,7 @@ export default defineConfig({
             urlPattern: /r2\.dev\/luts\/.*\.cube$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'lut-cache-r2',
+              cacheName: 'lut-cache-r2-v2',
               expiration: { maxEntries: 200 },
             },
           },

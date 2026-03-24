@@ -87,33 +87,31 @@ export default function FilterStrip({ activeTab, activeLutId, onSelect, onClear,
         if (cancelled || genIdRef.current !== id) break;
 
         const chunk = pending.slice(i, i + BATCH_SIZE);
-        const results = await Promise.allSettled(
+
+        // Load LUT data in parallel (network I/O)
+        const loaded = await Promise.allSettled(
           chunk.map(async (lut) => {
             let parsed: ParsedLUT;
-
             if (useBundledThumbs) {
               const thumbLut = getThumbLUT(lut);
-              if (thumbLut) {
-                parsed = thumbLut;
-              } else {
-                parsed = await loadLUT(lut);
-              }
+              parsed = thumbLut ?? await loadLUT(lut);
             } else {
               parsed = await loadLUT(lut);
             }
-
-            return {
-              id: lut.id,
-              dataUrl: await generateThumbnail(sourceImage!, parsed, THUMB_SIZE),
-            };
+            return { meta: lut, parsed };
           }),
         );
 
-        for (const r of results) {
-          if (r.status === 'fulfilled') {
-            thumbCache.set(r.value.id, r.value.dataUrl);
-            batch.set(r.value.id, r.value.dataUrl);
-          }
+        // Render thumbnails sequentially (single shared WebGL context)
+        for (const r of loaded) {
+          if (cancelled || genIdRef.current !== id) break;
+          if (r.status !== 'fulfilled') continue;
+          const { meta, parsed } = r.value;
+          try {
+            const dataUrl = await generateThumbnail(sourceImage!, parsed, THUMB_SIZE);
+            thumbCache.set(meta.id, dataUrl);
+            batch.set(meta.id, dataUrl);
+          } catch { /* skip failed thumbnail */ }
         }
 
         if (!cancelled && genIdRef.current === id) {

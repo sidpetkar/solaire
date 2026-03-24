@@ -3,7 +3,7 @@
  *
  * Produces:
  *   public/luts/bin/<encoded-path>.bin   — 33^3 binary LUT (421 KB each)
- *   public/luts/thumb-bundle.bin         — all LUTs at 17^3, concatenated
+ *   public/luts/thumb-bundle.bin         — all LUTs at 8^3, concatenated
  *   public/luts/manifest.json            — updated with binPath + thumbOffset
  *
  * Binary format per .bin file:
@@ -11,8 +11,8 @@
  *   [size^3 * 3 * 4 bytes] float32 LE — RGB triplets
  *
  * thumb-bundle.bin layout:
- *   Concatenated 17^3 LUTs in manifest order. Each entry is exactly
- *   17^3 * 3 * 4 = 58,956 bytes. Offset = index * 58,956.
+ *   Concatenated 8^3 LUTs in manifest order. Each entry is exactly
+ *   8^3 * 3 * 4 = 6,144 bytes. Offset = index * 6,144.
  *
  * Usage:  node scripts/build-lut-binaries.mjs
  */
@@ -26,7 +26,7 @@ const PUBLIC_DIR = path.resolve(__dirname, '..', 'public');
 const LUTS_DIR = path.join(PUBLIC_DIR, 'luts');
 const BIN_DIR = path.join(LUTS_DIR, 'bin');
 const TARGET_SIZE = 33;
-const THUMB_SIZE = 17;
+const THUMB_SIZE = 8;
 const THUMB_ENTRY_BYTES = THUMB_SIZE * THUMB_SIZE * THUMB_SIZE * 3 * 4;
 
 // ── .cube parser ───────────────────────────────────────────────────
