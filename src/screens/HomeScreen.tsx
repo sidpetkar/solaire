@@ -256,7 +256,15 @@ export default function HomeScreen() {
               />
             ) : (
               <ScreenHeader
-                left={<WelcomeGreeting frames={greetingFrames} />}
+                left={<WelcomeGreeting frames={greetingFrames} logoSrc="/logo-solaire.png" />}
+                center={
+                  <img
+                    src="/logo-solaire.png"
+                    alt="Solaire"
+                    className="hidden md:block object-contain"
+                    style={{ height: 46 }}
+                  />
+                }
                 right={
                   <button
                     onClick={() => {
