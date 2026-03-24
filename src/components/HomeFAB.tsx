@@ -84,7 +84,9 @@ export default function HomeFAB({ onTakePhoto, onChooseGallery, onImportFolder }
       {/* FAB button */}
       <button
         onClick={toggle}
-        className="fixed z-50 flex items-center justify-center w-14 h-14 rounded-full transition-colors duration-300"
+        className={`fixed z-50 flex items-center justify-center w-14 h-14 rounded-full transition-colors duration-300 ${
+          !open ? 'animate-fab-nudge' : ''
+        }`}
         style={{
           bottom: 28,
           right: 20,

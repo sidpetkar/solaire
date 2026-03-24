@@ -118,3 +118,12 @@ input[type="file"] {
 .animate-ai-pulse-overlay {
   animation: ai-pulse 2s ease-in-out infinite;
 }
+
+@keyframes fab-nudge {
+  0% { transform: rotate(0deg); animation-timing-function: cubic-bezier(0.15, 0.7, 0.25, 1); }
+  10% { transform: rotate(360deg); }
+  100% { transform: rotate(360deg); }
+}
+.animate-fab-nudge {
+  animation: fab-nudge 10s linear infinite;
+}
