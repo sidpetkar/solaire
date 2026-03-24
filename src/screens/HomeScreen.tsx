@@ -7,8 +7,11 @@ import MasonryGrid from '../components/MasonryGrid';
 import HomeFAB from '../components/HomeFAB';
 import PhotoFolderTabs from '../components/PhotoFolderTabs';
 import FolderContextMenu from '../components/FolderContextMenu';
+import WelcomeGreeting from '../components/WelcomeGreeting';
 import { useImageStore } from '../hooks/useImageStore';
 import { useFolderStore } from '../hooks/useFolderStore';
+import { useGreeting } from '../hooks/useGreeting';
+import { useAuth } from '../context/AuthContext';
 import { initLUTs } from '../engine/lutManager';
 import { SettingsDrawer } from './SettingsScreen';
 
@@ -16,6 +19,9 @@ const SCROLL_HIDE_THRESHOLD = 10;
 
 export default function HomeScreen() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const firstName = user?.displayName?.split(' ')[0] ?? null;
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dirInputRef = useRef<HTMLInputElement>(null);
   const { images, importImages, deleteImage, refresh: refreshImages } = useImageStore();
@@ -186,6 +192,8 @@ export default function HomeScreen() {
     return images.filter((img) => img.folderId === activeFolderId);
   }, [images, activeFolderId]);
 
+  const greetingFrames = useGreeting(firstName, images.length);
+
   const enableScrollHide = images.length >= SCROLL_HIDE_THRESHOLD && !selectMode;
 
   const handleScroll = useCallback(() => {
@@ -248,7 +256,7 @@ export default function HomeScreen() {
               />
             ) : (
               <ScreenHeader
-                left={<h1 className="text-lg font-medium tracking-wider normal-case">Welcome Sid,</h1>}
+                left={<WelcomeGreeting frames={greetingFrames} />}
                 right={
                   <button
                     onClick={() => {
