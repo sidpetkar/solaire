@@ -3,12 +3,7 @@ import {
   PaperPlaneRight, SpinnerGap, Check, X, ImageSquare,
 } from '@phosphor-icons/react';
 import { AIEditSession, isAIConfigured, type AIEditResult } from '../services/geminiAI';
-
-interface ChatEntry {
-  role: 'user' | 'ai';
-  text: string;
-  model?: string;
-}
+import { promptToGerund } from '../utils/promptToGerund';
 
 interface Props {
   getCanvasBlob: () => Promise<Blob | null>;
@@ -19,29 +14,24 @@ interface Props {
   onCancel: () => void;
   onEditingChange?: (editing: boolean) => void;
   onLoadingChange?: (loading: boolean) => void;
+  onHintChange?: (hint: string | null) => void;
 }
 
 export default function AIPanel({
   getCanvasBlob, imageWidth, imageHeight,
-  onPreview, onAccept, onCancel, onEditingChange, onLoadingChange,
+  onPreview, onAccept, onCancel, onEditingChange, onLoadingChange, onHintChange,
 }: Props) {
   const sessionRef = useRef<AIEditSession>(new AIEditSession());
-  const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingResult, setPendingResult] = useState<Blob | null>(null);
   const [refImages, setRefImages] = useState<File[]>([]);
   const [refPreviews, setRefPreviews] = useState<string[]>([]);
-  const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const configured = isAIConfigured();
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory]);
 
   useEffect(() => {
     sessionRef.current.start();
@@ -59,10 +49,10 @@ export default function AIPanel({
     if (!trimmed || loading) return;
 
     setError(null);
-    setChatHistory((prev) => [...prev, { role: 'user', text: trimmed }]);
     setPrompt('');
     setLoading(true);
     onLoadingChange?.(true);
+    onHintChange?.(promptToGerund(trimmed));
 
     try {
       const isFirst = sessionRef.current.turnCount === 0;
@@ -89,13 +79,6 @@ export default function AIPanel({
         setRefPreviews((prev) => { prev.forEach(URL.revokeObjectURL); return []; });
       }
 
-      const aiText = result.text || (result.imageBlob ? 'Edit applied.' : 'No changes returned.');
-      setChatHistory((prev) => [...prev, {
-        role: 'ai',
-        text: aiText,
-        model: result.model === 'gemini-3-pro-image-preview' ? 'Pro' : 'Flash',
-      }]);
-
       if (result.imageBlob) {
         setPendingResult(result.imageBlob);
         onPreview(result.imageBlob);
@@ -109,8 +92,9 @@ export default function AIPanel({
     } finally {
       setLoading(false);
       onLoadingChange?.(false);
+      onHintChange?.(null);
     }
-  }, [prompt, loading, getCanvasBlob, refImages, imageWidth, imageHeight, onPreview, onEditingChange, onLoadingChange]);
+  }, [prompt, loading, getCanvasBlob, refImages, imageWidth, imageHeight, onPreview, onEditingChange, onLoadingChange, onHintChange]);
 
   const handleAccept = useCallback(() => {
     if (!pendingResult) return;
@@ -119,7 +103,6 @@ export default function AIPanel({
     onEditingChange?.(false);
     sessionRef.current.end();
     sessionRef.current.start();
-    setChatHistory([]);
   }, [pendingResult, onAccept, onEditingChange]);
 
   const handleReject = useCallback(() => {
@@ -128,7 +111,6 @@ export default function AIPanel({
     onEditingChange?.(false);
     sessionRef.current.end();
     sessionRef.current.start();
-    setChatHistory([]);
   }, [onCancel, onEditingChange]);
 
   const handleAddRef = useCallback(() => {
@@ -163,7 +145,7 @@ export default function AIPanel({
     setPrompt(e.target.value);
     const ta = e.target;
     ta.style.height = 'auto';
-    ta.style.height = `${Math.min(ta.scrollHeight, 76)}px`;
+    ta.style.height = `${Math.min(ta.scrollHeight, 84)}px`;
   }, []);
 
   if (!configured) {
@@ -198,29 +180,7 @@ export default function AIPanel({
   }
 
   return (
-    <div className="flex flex-col max-w-[600px] mx-auto w-full" style={{ maxHeight: 260 }}>
-      {chatHistory.length > 0 && (
-        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 min-h-0">
-          {chatHistory.map((entry, i) => (
-            <div key={i} className={`flex ${entry.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[85%] rounded-xl px-3 py-1.5 text-[12px] tracking-normal leading-relaxed ${
-                  entry.role === 'user'
-                    ? 'bg-amber-400/15 text-accent'
-                    : 'bg-white/5 text-muted/80'
-                }`}
-              >
-                {entry.text}
-                {entry.model && (
-                  <span className="ml-2 text-[10px] text-muted/40 tracking-wider">{entry.model}</span>
-                )}
-              </div>
-            </div>
-          ))}
-          <div ref={chatEndRef} />
-        </div>
-      )}
-
+    <div className="flex flex-col max-w-[600px] mx-auto w-full">
       {error && (
         <button
           onClick={() => setError(null)}
@@ -256,8 +216,10 @@ export default function AIPanel({
             onKeyDown={handleKeyDown}
             placeholder="Describe your edit..."
             rows={1}
-            className="flex-1 bg-transparent text-[12px] tracking-normal text-accent placeholder:text-muted/30 px-3 py-2.5 resize-none outline-none leading-snug overflow-y-auto"
-            style={{ maxHeight: 76, scrollbarWidth: 'none' }}
+            inputMode="text"
+            enterKeyHint="send"
+            className="flex-1 bg-transparent text-[14px] tracking-normal text-accent placeholder:text-muted/30 px-3 py-2.5 resize-none outline-none leading-snug overflow-y-auto"
+            style={{ maxHeight: 84, scrollbarWidth: 'none' }}
             disabled={loading}
           />
           <button

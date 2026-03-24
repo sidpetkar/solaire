@@ -65,7 +65,9 @@ export default function EditScreen() {
   const [adjustEditing, setAdjustEditing] = useState(false);
   const [aiEditing, setAiEditing] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiHint, setAiHint] = useState<string | null>(null);
   const preAiSourceRef = useRef<HTMLImageElement | null>(null);
+  const aiBlobUrlRef = useRef<string | null>(null);
 
   const [history, setHistory] = useState<HistoryEntry[]>([
     { lutId: null, meta: null, parsed: null, effectParams: {}, adjustParams: {}, blurParams: { ...DEFAULT_BLUR_PARAMS } },
@@ -75,6 +77,8 @@ export default function EditScreen() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { folders } = useFolderStore();
   const [strengthMode, setStrengthMode] = useState(false);
   const [filterStrength, setFilterStrength] = useState(100);
@@ -198,8 +202,6 @@ export default function EditScreen() {
       setAdjustParams(current.adjustParams);
       setBlurParams(current.blurParams);
       setFilterStrength(session.filterStrength);
-      const restoredPanel = session.activePanel === 'effects' ? 'adjust' : session.activePanel;
-      setActivePanel(restoredPanel as EditorPanel);
 
       handle.renderer.setEffects(current.effectParams);
       handle.renderer.setAdjustments(current.adjustParams);
@@ -250,9 +252,9 @@ export default function EditScreen() {
       history: serialized,
       historyIndex,
       filterStrength,
-      activePanel,
+      activePanel: 'filters',
     });
-  }, [history, historyIndex, filterStrength, activePanel, existingId, saveSession]);
+  }, [history, historyIndex, filterStrength, existingId, saveSession]);
 
   const pushHistory = useCallback((entry: HistoryEntry) => {
     setHistory((prev) => {
@@ -383,7 +385,9 @@ export default function EditScreen() {
   }, [sourceImg]);
 
   const handleAiAccept = useCallback((blob: Blob) => {
+    if (aiBlobUrlRef.current) URL.revokeObjectURL(aiBlobUrlRef.current);
     const url = URL.createObjectURL(blob);
+    aiBlobUrlRef.current = url;
     const img = new Image();
     img.onload = () => {
       setSourceImg(img);
@@ -403,7 +407,6 @@ export default function EditScreen() {
       setHistoryIndex(0);
 
       preAiSourceRef.current = null;
-      URL.revokeObjectURL(url);
     };
     img.src = url;
   }, [renderToCanvas]);
@@ -452,6 +455,12 @@ export default function EditScreen() {
     navigate('/');
   }, [existingId, deleteImage, navigate]);
 
+  const showToast = useCallback((msg: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToastMsg(msg);
+    toastTimer.current = setTimeout(() => setToastMsg(null), 1800);
+  }, []);
+
   const pushEditStateToCloud = useCallback((imageId: string) => {
     if (!user) return;
     const serialized: SerializedHistoryEntry[] = history.map((e) => ({
@@ -483,10 +492,11 @@ export default function EditScreen() {
       );
       const id = await saveImage(blob, activeLutId ?? undefined, existingId);
       pushEditStateToCloud(id);
+      showToast('Saved');
     } catch (err) {
       console.error('Save failed:', err);
     }
-  }, [activeLutId, saveImage, sourceImg, existingId, pushEditStateToCloud, aiEditing, aiLoading]);
+  }, [activeLutId, saveImage, sourceImg, existingId, pushEditStateToCloud, aiEditing, aiLoading, showToast]);
 
   const handleConfirmDownload = useCallback(async (withWatermark: boolean) => {
     setShowSaveModal(false);
@@ -883,7 +893,7 @@ export default function EditScreen() {
         }
       />
 
-      <div ref={containerRef} className="flex-1 flex items-center justify-center px-4 overflow-hidden relative">
+      <div ref={containerRef} className="flex-1 flex flex-col items-center justify-center px-4 overflow-hidden relative">
         <div
           className="relative overflow-hidden"
           style={{ touchAction: isZoomed ? 'none' : 'auto' }}
@@ -928,9 +938,14 @@ export default function EditScreen() {
             </div>
           )}
           {aiLoading && (
-            <div className="absolute inset-0 bg-black/20 pointer-events-none animate-[pulse_2.5s_ease-in-out_infinite]" />
+            <div className="absolute inset-0 bg-white/15 pointer-events-none animate-ai-pulse-overlay" />
           )}
         </div>
+        {aiHint && (
+          <p className="text-[12px] tracking-wider text-white/60 normal-case pt-1.5 text-left self-start animate-ai-pulse-text">
+            {aiHint}
+          </p>
+        )}
         {!loaded && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span className="text-xs text-muted tracking-widest animate-pulse">Loading...</span>
@@ -1062,6 +1077,7 @@ export default function EditScreen() {
               onCancel={handleAiCancel}
               onEditingChange={setAiEditing}
               onLoadingChange={setAiLoading}
+              onHintChange={setAiHint}
             />
             {!aiEditing && (
               <div className="border-t border-white/5">
@@ -1123,6 +1139,14 @@ export default function EditScreen() {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {toastMsg && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-panel-slide-up">
+          <div className="bg-surface-lighter/95 backdrop-blur-sm rounded-full px-5 py-2 shadow-lg border border-white/10">
+            <span className="text-[12px] tracking-widest text-accent/90">{toastMsg}</span>
           </div>
         </div>
       )}

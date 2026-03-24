@@ -107,3 +107,14 @@ input[type="file"] {
 .animate-greeting-enter {
   animation: greeting-enter 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
+
+@keyframes ai-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+.animate-ai-pulse-text {
+  animation: ai-pulse 2s ease-in-out infinite;
+}
+.animate-ai-pulse-overlay {
+  animation: ai-pulse 2s ease-in-out infinite;
+}
