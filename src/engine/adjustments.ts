@@ -40,11 +40,28 @@ export const ADJUST_TOOLS: AdjustToolDef[] = [
     params: [{ key: 'exposure', label: 'Exposure', min: -100, max: 100, default: 0, step: 1 }],
   },
   {
+    id: 'brightness',
+    label: 'Brightness',
+    icon: 'SunDim',
+    type: 'uber',
+    params: [{ key: 'brightness', label: 'Brightness', min: -100, max: 100, default: 0, step: 1 }],
+  },
+  {
     id: 'contrast',
     label: 'Contrast',
     icon: 'CircleHalf',
     type: 'uber',
     params: [{ key: 'contrast', label: 'Contrast', min: -100, max: 100, default: 0, step: 1 }],
+  },
+  {
+    id: 'highlights-shadows',
+    label: 'HL & Shadow',
+    icon: 'SunHorizon',
+    type: 'uber',
+    params: [
+      { key: 'highlights', label: 'Highlights', min: -100, max: 100, default: 0, step: 1 },
+      { key: 'shadows', label: 'Shadows', min: -100, max: 100, default: 0, step: 1 },
+    ],
   },
   {
     id: 'saturation',
@@ -115,7 +132,10 @@ export const DEFAULT_BLUR_PARAMS: BlurParams = {
 export function isUberActive(params: AdjustParams): boolean {
   return (
     (params.exposure ?? 0) !== 0 ||
+    (params.brightness ?? 0) !== 0 ||
     (params.contrast ?? 0) !== 0 ||
+    (params.highlights ?? 0) !== 0 ||
+    (params.shadows ?? 0) !== 0 ||
     (params.saturation ?? 0) !== 0 ||
     (params.temperature ?? 0) !== 0 ||
     (params.tint ?? 0) !== 0 ||

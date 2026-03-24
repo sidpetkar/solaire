@@ -14,7 +14,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
-import { syncFromCloud, uploadAllLocalToCloud } from '../services/cloudSync';
+import { syncFromCloud, uploadAllLocalToCloud, syncEditStatesFromCloud } from '../services/cloudSync';
 
 const ADMIN_EMAIL = 'siddhantpetkar@gmail.com';
 const GUEST_KEY = 'solaire_guest';
@@ -72,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const count = await syncFromCloud(user!.uid);
+        await syncEditStatesFromCloud(user!.uid);
         if (count > 0) {
           window.dispatchEvent(new Event('solaire-cloud-sync'));
         }

@@ -252,7 +252,10 @@ export class WebGLRenderer {
     const adj = this.adjustParams;
     const hasUber = (
       (adj.exposure ?? 0) !== 0 ||
+      (adj.brightness ?? 0) !== 0 ||
       (adj.contrast ?? 0) !== 0 ||
+      (adj.highlights ?? 0) !== 0 ||
+      (adj.shadows ?? 0) !== 0 ||
       (adj.saturation ?? 0) !== 0 ||
       (adj.temperature ?? 0) !== 0 ||
       (adj.tint ?? 0) !== 0 ||
@@ -318,9 +321,11 @@ export class WebGLRenderer {
     // Build list of remaining passes to count them for "isLast" detection
     const adj = this.adjustParams;
     const hasUber = (
-      (adj.exposure ?? 0) !== 0 || (adj.contrast ?? 0) !== 0 ||
-      (adj.saturation ?? 0) !== 0 || (adj.temperature ?? 0) !== 0 ||
-      (adj.tint ?? 0) !== 0 || (adj.vignette ?? 0) !== 0 || (adj.fade ?? 0) !== 0
+      (adj.exposure ?? 0) !== 0 || (adj.brightness ?? 0) !== 0 ||
+      (adj.contrast ?? 0) !== 0 || (adj.highlights ?? 0) !== 0 ||
+      (adj.shadows ?? 0) !== 0 || (adj.saturation ?? 0) !== 0 ||
+      (adj.temperature ?? 0) !== 0 || (adj.tint ?? 0) !== 0 ||
+      (adj.vignette ?? 0) !== 0 || (adj.fade ?? 0) !== 0
     );
     const hasSharpen = (adj.sharpen ?? 0) !== 0;
     const hasGrain = (adj.grain_strength ?? 0) !== 0;
@@ -370,7 +375,10 @@ export class WebGLRenderer {
       const prog = this.getOrCreateProgram('adjust', ADJUST_FRAGMENT);
       renderPass(prog, readFBO.texture, isLast(), () => {
         gl.uniform1f(gl.getUniformLocation(prog, 'u_exposure'), (adj.exposure ?? 0) / 100);
+        gl.uniform1f(gl.getUniformLocation(prog, 'u_brightness'), (adj.brightness ?? 0) / 100);
         gl.uniform1f(gl.getUniformLocation(prog, 'u_contrast'), (adj.contrast ?? 0) / 100);
+        gl.uniform1f(gl.getUniformLocation(prog, 'u_highlights'), (adj.highlights ?? 0) / 100);
+        gl.uniform1f(gl.getUniformLocation(prog, 'u_shadows'), (adj.shadows ?? 0) / 100);
         gl.uniform1f(gl.getUniformLocation(prog, 'u_saturation'), (adj.saturation ?? 0) / 100);
         gl.uniform1f(gl.getUniformLocation(prog, 'u_temperature'), (adj.temperature ?? 0) / 100);
         gl.uniform1f(gl.getUniformLocation(prog, 'u_tint'), (adj.tint ?? 0) / 100);

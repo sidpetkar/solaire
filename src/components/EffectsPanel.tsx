@@ -134,12 +134,12 @@ export default function EffectsPanel({ activeEffects, onChange, onEditingChange 
                   : 'bg-white/[0.03] active:bg-white/10'
               }`}
             >
-              <span className={isActive ? 'text-amber-400' : 'text-muted/60'}>
+              <span className={isActive ? 'text-amber-400' : 'text-accent/70'}>
                 {ICON_MAP[fx.icon] ?? <FilmStrip size={24} weight="duotone" />}
               </span>
               <span
-                className={`text-[10px] tracking-wider ${
-                  isActive ? 'text-amber-400' : 'text-muted/60'
+                className={`text-[10px] tracking-wider font-light ${
+                  isActive ? 'text-amber-400' : 'text-accent/70'
                 }`}
               >
                 {fx.label}

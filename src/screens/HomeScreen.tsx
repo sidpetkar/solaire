@@ -201,6 +201,7 @@ export default function HomeScreen() {
         <MasonryGrid
           images={filteredImages}
           onDoubleTap={handleDoubleTap}
+          onEmptyDoubleTap={() => fileInputRef.current?.click()}
           onScroll={handleScroll}
           folderTabs={
             folders.length > 0 ? (

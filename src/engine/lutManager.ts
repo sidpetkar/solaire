@@ -27,6 +27,10 @@ let thumbBundlePromise: Promise<void> | null = null;
 
 // ── Public getters ──────────────────────────────────────────────────
 
+export function getLUTById(id: string): LUTMeta | undefined {
+  return LUT_REGISTRY.find((m) => m.id === id);
+}
+
 export function getAllLUTs(): LUTMeta[] {
   const disabled = getDisabledCategories();
   if (disabled.size === 0) return LUT_REGISTRY;

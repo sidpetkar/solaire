@@ -1,11 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
+const COLLAGES = ['/solaire-collage.png', '/solaire-collage-2.png'];
+const CYCLE_MS = 4000;
 
 export default function AuthScreen() {
   const navigate = useNavigate();
   const { signInWithGoogle, skip, isGuest } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [activeCollage, setActiveCollage] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveCollage((prev) => (prev + 1) % COLLAGES.length);
+    }, CYCLE_MS);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleGoogle = async () => {
     setBusy(true);
@@ -41,12 +52,16 @@ export default function AuthScreen() {
 
         {/* Collage image — flex-1 takes available space */}
         <div className="relative w-full flex-1 min-h-0">
-          <img
-            src="/solaire-collage.png"
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover object-left-top"
-            draggable={false}
-          />
+          {COLLAGES.map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover object-left-top transition-opacity duration-1000 ease-in-out"
+              style={{ opacity: activeCollage === i ? 1 : 0 }}
+              draggable={false}
+            />
+          ))}
           <div
             className="absolute inset-x-0 bottom-0 pointer-events-none"
             style={{

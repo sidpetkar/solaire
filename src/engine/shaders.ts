@@ -144,7 +144,10 @@ precision highp float;
 
 uniform sampler2D u_image;
 uniform float u_exposure;
+uniform float u_brightness;
 uniform float u_contrast;
+uniform float u_highlights;
+uniform float u_shadows;
 uniform float u_saturation;
 uniform float u_temperature;
 uniform float u_tint;
@@ -157,20 +160,42 @@ out vec4 fragColor;
 void main() {
   vec3 c = texture(u_image, v_uv).rgb;
 
+  // Exposure (multiplicative, EV-style)
   c *= pow(2.0, u_exposure);
 
+  // Brightness (gamma-curve lift/pull, like Lightroom)
+  if (u_brightness > 0.0) {
+    c = pow(c, vec3(1.0 / (1.0 + u_brightness * 1.5)));
+  } else if (u_brightness < 0.0) {
+    c = pow(c, vec3(1.0 - u_brightness * 1.5));
+  }
+
+  // Contrast
   c = (c - 0.5) * (1.0 + u_contrast) + 0.5;
 
-  float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  // Highlights & Shadows (luminance-weighted, Lightroom-style)
+  float lum = clamp(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
+  // Highlights: pow mask focuses on bright pixels; positive = recover, negative = boost
+  float hMask = pow(lum, 1.5);
+  c -= u_highlights * hMask * 0.4;
+  // Shadows: pow mask focuses on dark pixels; positive = lift, negative = crush
+  float sMask = pow(1.0 - lum, 1.5);
+  c += u_shadows * sMask * 0.4;
+
+  // Saturation
+  lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = mix(vec3(lum), c, 1.0 + u_saturation);
 
+  // White balance
   c.r += u_temperature * 0.08;
   c.b -= u_temperature * 0.08;
   c.g += u_tint * 0.05;
   c.r -= u_tint * 0.02;
 
+  // Fade
   c = c * (1.0 - u_fade) + u_fade * vec3(0.15);
 
+  // Vignette
   float d = length(v_uv - 0.5) * 2.0;
   float vig = smoothstep(0.4, 1.4, d * u_vignette);
   c *= 1.0 - vig;

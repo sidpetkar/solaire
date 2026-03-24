@@ -20,10 +20,12 @@ import { useCategoryPrefs } from '../hooks/useCategoryPrefs';
 import { shouldWatermark } from '../hooks/useWatermarkPref';
 import { useAuth } from '../context/AuthContext';
 import { applyWatermark } from '../engine/watermark';
-import { initLUTs } from '../engine/lutManager';
+import { initLUTs, getLUTById, loadLUT } from '../engine/lutManager';
 import { DEFAULT_BLUR_PARAMS, type AdjustParams, type BlurParams } from '../engine/adjustments';
 import type { LUTMeta, ParsedLUT } from '../types';
 import type { EffectParams } from '../engine/effects';
+import { useEditSession, type SerializedHistoryEntry, type EditSession } from '../hooks/useEditSession';
+import { uploadEditState } from '../services/cloudSync';
 
 type EditorPanel = 'filters' | 'effects' | 'adjust';
 
@@ -83,6 +85,8 @@ export default function EditScreen() {
 
   const state = location.state as { imageUrl?: string; imageId?: string } | null;
   const existingId = state?.imageId ?? undefined;
+  const { save: saveSession, load: loadSession } = useEditSession(existingId);
+  const sessionRestored = useRef(false);
 
   useEffect(() => {
     initLUTs().then(() => setLutsReady(true));
@@ -148,6 +152,66 @@ export default function EditScreen() {
     return () => { cancelled = true; };
   }, [state, getFullImage, renderToCanvas]);
 
+  // Restore saved edit session when image + LUTs are ready
+  useEffect(() => {
+    if (!sourceImg || !lutsReady || !existingId || sessionRestored.current) return;
+    sessionRestored.current = true;
+
+    (async () => {
+      const session = await loadSession();
+      if (!session || session.history.length === 0) return;
+
+      const handle = canvasHandle.current;
+      if (!handle?.renderer) return;
+
+      const restoredHistory: HistoryEntry[] = await Promise.all(
+        session.history.map(async (entry: SerializedHistoryEntry) => {
+          let meta: LUTMeta | null = null;
+          let parsed: ParsedLUT | null = null;
+          if (entry.lutId) {
+            meta = getLUTById(entry.lutId) ?? null;
+            if (meta) {
+              try { parsed = await loadLUT(meta); } catch { /* LUT may have been removed */ }
+            }
+          }
+          return {
+            lutId: entry.lutId,
+            meta,
+            parsed,
+            effectParams: entry.effectParams,
+            adjustParams: entry.adjustParams,
+            blurParams: entry.blurParams,
+          };
+        }),
+      );
+
+      const idx = Math.min(session.historyIndex, restoredHistory.length - 1);
+      const current = restoredHistory[idx];
+
+      setHistory(restoredHistory);
+      setHistoryIndex(idx);
+      setActiveLutId(current.lutId);
+      setEffectParams(current.effectParams);
+      setAdjustParams(current.adjustParams);
+      setBlurParams(current.blurParams);
+      setFilterStrength(session.filterStrength);
+      setActivePanel(session.activePanel as EditorPanel);
+
+      handle.renderer.setEffects(current.effectParams);
+      handle.renderer.setAdjustments(current.adjustParams);
+      handle.renderer.setBlur(current.blurParams.amount > 0 ? current.blurParams : null);
+      handle.renderer.setIntensity(session.filterStrength / 100);
+
+      if (current.parsed) {
+        handle.renderer.uploadLUT(current.parsed);
+      } else {
+        handle.renderer.clearLUT();
+      }
+      handle.renderer.uploadImage(sourceImg);
+      handle.renderer.render();
+    })();
+  }, [sourceImg, lutsReady, existingId, loadSession]);
+
   const applyHistoryEntry = useCallback((entry: HistoryEntry) => {
     const handle = canvasHandle.current;
     if (!handle?.renderer || !sourceImg) return;
@@ -167,6 +231,24 @@ export default function EditScreen() {
     handle.renderer.uploadImage(sourceImg);
     handle.renderer.render();
   }, [sourceImg]);
+
+  // Auto-save edit session to IndexedDB on every change
+  useEffect(() => {
+    if (!existingId || !sessionRestored.current) return;
+    const serialized: SerializedHistoryEntry[] = history.map((e) => ({
+      lutId: e.lutId,
+      lutShortCode: e.meta?.shortCode ?? null,
+      effectParams: e.effectParams,
+      adjustParams: e.adjustParams,
+      blurParams: e.blurParams,
+    }));
+    saveSession({
+      history: serialized,
+      historyIndex,
+      filterStrength,
+      activePanel,
+    });
+  }, [history, historyIndex, filterStrength, activePanel, existingId, saveSession]);
 
   const pushHistory = useCallback((entry: HistoryEntry) => {
     setHistory((prev) => {
@@ -292,6 +374,26 @@ export default function EditScreen() {
     navigate('/');
   }, [existingId, deleteImage, navigate]);
 
+  const pushEditStateToCloud = useCallback((imageId: string) => {
+    if (!user) return;
+    const serialized: SerializedHistoryEntry[] = history.map((e) => ({
+      lutId: e.lutId,
+      lutShortCode: e.meta?.shortCode ?? null,
+      effectParams: e.effectParams,
+      adjustParams: e.adjustParams,
+      blurParams: e.blurParams,
+    }));
+    const session: EditSession = {
+      imageId,
+      history: serialized,
+      historyIndex,
+      filterStrength,
+      activePanel,
+      updatedAt: Date.now(),
+    };
+    uploadEditState(user.uid, imageId, session).catch(() => {});
+  }, [user, history, historyIndex, filterStrength, activePanel]);
+
   const handleSaveToApp = useCallback(async () => {
     setShowMenu(false);
     const handle = canvasHandle.current;
@@ -300,12 +402,13 @@ export default function EditScreen() {
       const blob = await handle.renderer.exportBlob(
         sourceImg, sourceImg.naturalWidth, sourceImg.naturalHeight,
       );
-      await saveImage(blob, activeLutId ?? undefined, existingId);
+      const id = await saveImage(blob, activeLutId ?? undefined, existingId);
+      pushEditStateToCloud(id);
       navigate('/');
     } catch (err) {
       console.error('Save failed:', err);
     }
-  }, [activeLutId, saveImage, navigate, sourceImg, existingId]);
+  }, [activeLutId, saveImage, navigate, sourceImg, existingId, pushEditStateToCloud]);
 
   const handleConfirmDownload = useCallback(async (withWatermark: boolean) => {
     setShowSaveModal(false);
@@ -316,6 +419,7 @@ export default function EditScreen() {
         sourceImg, sourceImg.naturalWidth, sourceImg.naturalHeight,
       );
       const id = await saveImage(blob, activeLutId ?? undefined, existingId);
+      pushEditStateToCloud(id);
       const filename = `SOLAIRE_${id}.jpg`;
 
       if (withWatermark && doWatermark) {
@@ -328,7 +432,7 @@ export default function EditScreen() {
     } catch (err) {
       console.error('Save failed:', err);
     }
-  }, [activeLutId, saveImage, navigate, sourceImg, existingId, doWatermark]);
+  }, [activeLutId, saveImage, navigate, sourceImg, existingId, doWatermark, pushEditStateToCloud]);
 
   const handleDownload = useCallback(() => {
     setShowMenu(false);
@@ -806,7 +910,7 @@ export default function EditScreen() {
               prefsKey={prefsKey}
             />
             <div className="border-t border-white/5">
-              <div className="flex items-center justify-center gap-8 px-4 py-4 max-w-[600px] mx-auto">
+              <div className="flex items-center justify-between md:justify-center md:gap-8 px-4 py-4 max-w-[600px] mx-auto">
                 <button className="text-base tracking-widest text-amber-400 border-b border-amber-400 pb-0.5">
                   Filters
                 </button>
@@ -839,7 +943,7 @@ export default function EditScreen() {
             </div>
             {!effectsEditing && (
               <div className="border-t border-white/5">
-                <div className="flex items-center justify-center gap-8 px-4 py-4 max-w-[600px] mx-auto">
+                <div className="flex items-center justify-between md:justify-center md:gap-8 px-4 py-4 max-w-[600px] mx-auto">
                   <button
                     onClick={() => setActivePanel('filters')}
                     className="text-base tracking-widest text-muted/60 hover:text-muted transition-colors"
@@ -873,7 +977,7 @@ export default function EditScreen() {
             />
             {!adjustEditing && (
               <div className="border-t border-white/5">
-                <div className="flex items-center justify-center gap-8 px-4 py-4 max-w-[600px] mx-auto">
+                <div className="flex items-center justify-between md:justify-center md:gap-8 px-4 py-4 max-w-[600px] mx-auto">
                   <button
                     onClick={() => setActivePanel('filters')}
                     className="text-base tracking-widest text-muted/60 hover:text-muted transition-colors"

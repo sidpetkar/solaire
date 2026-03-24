@@ -140,8 +140,23 @@ export default function FilterStrip({ activeTab, activeLutId, onSelect, onClear,
     onSelect(lut, parsed);
   }, [activeLutId, onSelect, onDoubleTapSelected]);
 
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
   return (
-    <div className="flex gap-2 px-4 overflow-x-auto items-center" style={{ height: 92, touchAction: 'pan-x' }}>
+    <div ref={stripRef} className="flex gap-2 px-4 overflow-x-auto items-center" style={{ height: 92, touchAction: 'pan-x' }}>
       <button
         onClick={onClear}
         className="shrink-0"

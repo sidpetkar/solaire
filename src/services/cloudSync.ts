@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   setDoc,
+  getDoc,
   deleteDoc,
   getDocs,
   query,
@@ -15,7 +16,8 @@ import {
   deleteObject,
 } from 'firebase/storage';
 import { db, storage } from '../lib/firebase';
-import { imageStore, thumbnailStore, metaStore } from '../store/db';
+import { imageStore, thumbnailStore, metaStore, editStore } from '../store/db';
+import type { EditSession } from '../hooks/useEditSession';
 
 export interface CloudImageMeta {
   id: string;
@@ -135,6 +137,72 @@ export async function syncFromCloud(uid: string): Promise<number> {
   }
 }
 
+// ── Edit state cloud sync ───────────────────────────────────────────
+
+function editStatesCol(uid: string) {
+  return collection(db, 'users', uid, 'editStates');
+}
+
+export async function uploadEditState(uid: string, imageId: string, session: EditSession): Promise<void> {
+  if (!db) return;
+  try {
+    await setDoc(doc(editStatesCol(uid), imageId), {
+      imageId: session.imageId,
+      history: JSON.stringify(session.history),
+      historyIndex: session.historyIndex,
+      filterStrength: session.filterStrength,
+      activePanel: session.activePanel,
+      updatedAt: session.updatedAt,
+    });
+  } catch (err) {
+    console.error('Edit state upload failed:', err);
+  }
+}
+
+export async function downloadEditState(uid: string, imageId: string): Promise<EditSession | null> {
+  if (!db) return null;
+  try {
+    const snap = await getDoc(doc(editStatesCol(uid), imageId));
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    return {
+      imageId: data.imageId as string,
+      history: JSON.parse(data.history as string),
+      historyIndex: data.historyIndex as number,
+      filterStrength: data.filterStrength as number,
+      activePanel: data.activePanel as string,
+      updatedAt: data.updatedAt as number,
+    };
+  } catch (err) {
+    console.error('Edit state download failed:', err);
+    return null;
+  }
+}
+
+export async function syncEditStatesFromCloud(uid: string): Promise<void> {
+  if (!db) return;
+  try {
+    const snapshot = await getDocs(editStatesCol(uid));
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      const imageId = data.imageId as string;
+      const local = await editStore.getItem<EditSession>(imageId);
+      const cloudUpdated = data.updatedAt as number;
+      if (local && local.updatedAt >= cloudUpdated) continue;
+      await editStore.setItem(imageId, {
+        imageId,
+        history: JSON.parse(data.history as string),
+        historyIndex: data.historyIndex as number,
+        filterStrength: data.filterStrength as number,
+        activePanel: data.activePanel as string,
+        updatedAt: cloudUpdated,
+      });
+    }
+  } catch (err) {
+    console.error('Edit states sync failed:', err);
+  }
+}
+
 export async function uploadAllLocalToCloud(uid: string): Promise<void> {
   if (!db || !storage) return;
 
@@ -157,4 +225,9 @@ export async function uploadAllLocalToCloud(uid: string): Promise<void> {
 
     await uploadImageToCloud(uid, meta.id, imageBlob, thumbBlob, meta);
   }
+
+  // Also push any local edit sessions
+  await editStore.iterate<EditSession, void>(async (session, key) => {
+    await uploadEditState(uid, key, session);
+  });
 }

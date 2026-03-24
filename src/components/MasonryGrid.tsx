@@ -10,6 +10,7 @@ interface GridImage {
 interface Props {
   images: GridImage[];
   onDoubleTap?: (id: string) => void;
+  onEmptyDoubleTap?: () => void;
   onScroll?: () => void;
   folderTabs?: ReactNode;
   selectedIds?: Set<string>;
@@ -24,6 +25,7 @@ const LONG_PRESS_MS = 500;
 export default function MasonryGrid({
   images,
   onDoubleTap,
+  onEmptyDoubleTap,
   onScroll,
   folderTabs,
   selectedIds,
@@ -33,6 +35,7 @@ export default function MasonryGrid({
   deletingIds,
 }: Props) {
   const lastTap = useRef<{ id: string; time: number }>({ id: '', time: 0 });
+  const lastEmptyTap = useRef(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
 
@@ -79,6 +82,20 @@ export default function MasonryGrid({
       }
     },
     [clearLongPress, selectMode, onToggleSelect, onDoubleTap],
+  );
+
+  const handleEmptyTap = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target !== e.currentTarget) return;
+      const now = Date.now();
+      if (now - lastEmptyTap.current < 300) {
+        onEmptyDoubleTap?.();
+        lastEmptyTap.current = 0;
+      } else {
+        lastEmptyTap.current = now;
+      }
+    },
+    [onEmptyDoubleTap],
   );
 
   const [colCount, setColCount] = useState(() =>
@@ -155,8 +172,8 @@ export default function MasonryGrid({
     return (
       <div className="flex-1 flex flex-col" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 6rem)' }}>
         {folderTabs}
-        <div className="flex-1 flex items-center justify-center opacity-30">
-          <p className="text-xs tracking-widest text-muted text-center px-10">
+        <div className="flex-1 flex items-center justify-center opacity-30" onClick={handleEmptyTap}>
+          <p className="text-xs tracking-widest text-muted text-center px-10 pointer-events-none">
             Your edited photos will appear here
           </p>
         </div>
@@ -169,6 +186,7 @@ export default function MasonryGrid({
       className="flex-1 overflow-y-auto overflow-x-hidden pb-24"
       style={{ touchAction: 'pan-y', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 6rem)' }}
       onScroll={onScroll}
+      onClick={handleEmptyTap}
     >
       {folderTabs && (
         <div

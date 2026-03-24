@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Sun, CircleHalf, Drop, Thermometer, Diamond,
+  Sun, SunDim, SunHorizon, CircleHalf, Drop, Thermometer, Diamond,
   DotsNine, FrameCorners, CircleDashed, CircleNotch,
   Crop, Check, X,
 } from '@phosphor-icons/react';
@@ -9,6 +9,8 @@ import type { ReactElement } from 'react';
 
 const ICON_MAP: Record<string, ReactElement> = {
   Sun: <Sun size={22} weight="duotone" />,
+  SunDim: <SunDim size={22} weight="duotone" />,
+  SunHorizon: <SunHorizon size={22} weight="duotone" />,
   CircleHalf: <CircleHalf size={22} weight="duotone" />,
   Drop: <Drop size={22} weight="duotone" />,
   Thermometer: <Thermometer size={22} weight="duotone" />,

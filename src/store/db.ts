@@ -29,3 +29,9 @@ export const folderStore = localforage.createInstance({
   storeName: 'folders',
   description: 'Photo folders',
 });
+
+export const editStore = localforage.createInstance({
+  name: 'solaire',
+  storeName: 'editSessions',
+  description: 'Persistent edit history per image',
+});
