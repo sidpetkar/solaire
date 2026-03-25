@@ -1,4 +1,4 @@
-const WATERMARK_TEXT = 'solaire.pro';
+const WATERMARK_TEXT = 'solaire.pics';
 const ANGLE_DEG = -25;
 const OPACITY = 0.13;
 const GAP_FACTOR = 0.35;
