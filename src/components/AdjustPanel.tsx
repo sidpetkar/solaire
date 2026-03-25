@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Sun, SunDim, SunHorizon, CircleHalf, Drop, Thermometer, Diamond,
   DotsNine, FrameCorners, CircleDashed, CircleNotch,
@@ -59,6 +59,21 @@ export default function AdjustPanel({
   const [pendingBlur, setPendingBlur] = useState<BlurParams>(DEFAULT_BLUR_PARAMS);
   const [savedParams, setSavedParams] = useState<AdjustParams>({});
   const [savedBlur, setSavedBlur] = useState<BlurParams>(DEFAULT_BLUR_PARAMS);
+
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [editingTool]);
 
   // FX editing state
   const [editingFx, setEditingFx] = useState<string | null>(null);
@@ -212,9 +227,9 @@ export default function AdjustPanel({
   ];
 
   return (
-    <div className="max-w-[600px] mx-auto w-full">
+    <div>
       {editingFxDef && editingFx ? (
-        <>
+        <div className="max-w-[600px] mx-auto w-full">
           <div
             className="px-4 space-y-3 animate-panel-slide-up flex flex-col justify-center"
             style={{ minHeight: STRIP_HEIGHT }}
@@ -253,9 +268,9 @@ export default function AdjustPanel({
               <Check size={22} weight="bold" />
             </button>
           </div>
-        </>
+        </div>
       ) : editingDef && editingTool && editingDef.type === 'blur' ? (
-        <>
+        <div className="max-w-[600px] mx-auto w-full">
           <div
             className="px-4 space-y-3 animate-panel-slide-up flex flex-col justify-center"
             style={{ minHeight: STRIP_HEIGHT }}
@@ -314,9 +329,9 @@ export default function AdjustPanel({
               <Check size={22} weight="bold" />
             </button>
           </div>
-        </>
+        </div>
       ) : editingDef && editingTool ? (
-        <>
+        <div className="max-w-[600px] mx-auto w-full">
           <div
             className="px-4 space-y-3 animate-panel-slide-up flex flex-col justify-center"
             style={{ minHeight: STRIP_HEIGHT }}
@@ -355,33 +370,36 @@ export default function AdjustPanel({
               <Check size={22} weight="bold" />
             </button>
           </div>
-        </>
+        </div>
       ) : (
         <div
-          className="flex px-1 overflow-x-auto md:justify-center items-center"
+          ref={stripRef}
+          className="flex px-1 overflow-x-auto items-center"
           style={{ height: STRIP_HEIGHT, touchAction: 'pan-x' }}
         >
-          {allItems.map((item, i) => (
-            <button
-              key={item.id + '-' + item.type}
-              onClick={() => item.type === 'fx' ? openFx(item.id) : openTool(item.id)}
-              className={`shrink-0 flex flex-col items-center justify-center gap-1.5 ${
-                i < allItems.length - 1 ? 'border-r border-white/8' : ''
-              }`}
-              style={{ width: TILE_SIZE, height: 68 }}
-            >
-              <span className={item.active ? 'text-amber-400' : 'text-accent/70'}>
-                {ICON_MAP[item.icon] ?? <Sun size={22} weight="duotone" />}
-              </span>
-              <span
-                className={`text-[10px] tracking-wider font-light ${
-                  item.active ? 'text-amber-400' : 'text-accent/70'
+          <div className="flex items-center mx-auto">
+            {allItems.map((item, i) => (
+              <button
+                key={item.id + '-' + item.type}
+                onClick={() => item.type === 'fx' ? openFx(item.id) : openTool(item.id)}
+                className={`shrink-0 flex flex-col items-center justify-center gap-1.5 ${
+                  i < allItems.length - 1 ? 'border-r border-white/8' : ''
                 }`}
+                style={{ width: TILE_SIZE, height: 68 }}
               >
-                {item.label}
-              </span>
-            </button>
-          ))}
+                <span className={item.active ? 'text-amber-400' : 'text-accent/70'}>
+                  {ICON_MAP[item.icon] ?? <Sun size={22} weight="duotone" />}
+                </span>
+                <span
+                  className={`text-[10px] tracking-wider font-light ${
+                    item.active ? 'text-amber-400' : 'text-accent/70'
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
