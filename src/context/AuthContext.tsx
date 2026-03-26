@@ -26,7 +26,7 @@ interface AuthState {
   isAdmin: boolean;
   loading: boolean;
   syncing: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<User | null>;
   skip: () => void;
   signOut: () => Promise<void>;
 }
@@ -86,12 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     doSync();
   }, [user]);
 
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (): Promise<User | null> => {
     if (!auth) {
       console.warn('Firebase auth not initialized');
-      return;
+      return null;
     }
-    await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
   }, []);
 
   const skip = useCallback(() => {

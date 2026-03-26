@@ -34,7 +34,7 @@ const FEATURES = [
 ];
 
 export default function PricingModal({ open, onClose }: Props) {
-  const { user } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const { refresh } = useSubscription();
   const [selected, setSelected] = useState<'monthly' | 'annual'>('annual');
   const [processing, setProcessing] = useState(false);
@@ -57,12 +57,29 @@ export default function PricingModal({ open, onClose }: Props) {
   }, [open]);
 
   const handleSubscribe = useCallback(async () => {
-    if (!user) return;
+    let currentUser = user;
+
+    if (!currentUser) {
+      try {
+        setProcessing(true);
+        setError(null);
+        currentUser = await signInWithGoogle();
+        if (!currentUser) {
+          setProcessing(false);
+          return;
+        }
+      } catch {
+        setError('Sign in failed. Please try again.');
+        setProcessing(false);
+        return;
+      }
+    }
+
     setProcessing(true);
     setError(null);
 
     try {
-      await startSubscription(selected, user);
+      await startSubscription(selected, currentUser);
       await refresh();
       onClose();
     } catch (err: any) {
@@ -74,7 +91,7 @@ export default function PricingModal({ open, onClose }: Props) {
     } finally {
       setProcessing(false);
     }
-  }, [user, selected, refresh, onClose]);
+  }, [user, selected, refresh, onClose, signInWithGoogle]);
 
   const handleBackdrop = useCallback(
     (e: React.MouseEvent) => {
@@ -109,6 +126,7 @@ export default function PricingModal({ open, onClose }: Props) {
             onSubscribe={handleSubscribe}
             processing={processing}
             error={error}
+            needsSignIn={!user}
           />
         </div>
       </div>
@@ -151,6 +169,7 @@ export default function PricingModal({ open, onClose }: Props) {
             onSubscribe={handleSubscribe}
             processing={processing}
             error={error}
+            needsSignIn={!user}
           />
         </div>
       </div>
@@ -164,12 +183,14 @@ function PricingContent({
   onSubscribe,
   processing,
   error,
+  needsSignIn,
 }: {
   selected: 'monthly' | 'annual';
   onSelect: (plan: 'monthly' | 'annual') => void;
   onSubscribe: () => void;
   processing: boolean;
   error: string | null;
+  needsSignIn: boolean;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -241,7 +262,11 @@ function PricingContent({
             : 'bg-amber-400 text-surface hover:bg-amber-300 active:scale-[0.98]'
         }`}
       >
-        {processing ? 'Processing...' : `Subscribe — ${selected === 'monthly' ? '₹99/mo' : '₹799/yr'}`}
+        {processing
+          ? 'Processing...'
+          : needsSignIn
+            ? `Sign in & Subscribe — ${selected === 'monthly' ? '₹99/mo' : '₹799/yr'}`
+            : `Subscribe — ${selected === 'monthly' ? '₹99/mo' : '₹799/yr'}`}
       </button>
 
       <div className="flex items-center justify-center gap-1.5 pt-0.5">

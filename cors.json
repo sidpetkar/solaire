@@ -1,0 +1,11 @@
+[
+  {
+    "origin": [
+      "http://localhost:5173",
+      "https://solaire.pics",
+      "https://www.solaire.pics"
+    ],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600
+  }
+]
