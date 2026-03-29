@@ -91,6 +91,19 @@ export default function AuthScreen() {
   const [visualFrame, setVisualFrame] = useState(0);
   const prevFrameRef = useRef(0);
 
+  /** One layout at a time so a single AuthHeadline mounts (two instances broke enter snap / rAF on desktop). */
+  const [isDesktopLayout, setIsDesktopLayout] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const handler = () => setIsDesktopLayout(mq.matches);
+    setIsDesktopLayout(mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setVisualFrame((prev) => {
@@ -124,7 +137,8 @@ export default function AuthScreen() {
   return (
     <div className="h-full w-full bg-surface overflow-hidden">
       {/* ─── Mobile / Tablet (< 1024px) ─── */}
-      <div className="lg:hidden h-full w-full flex justify-center">
+      {!isDesktopLayout ? (
+      <div className="h-full w-full flex justify-center">
         <div className="h-full w-full max-w-[430px] flex flex-col relative">
           <div
             className="absolute top-0 inset-x-0 z-10 pointer-events-none"
@@ -215,9 +229,9 @@ export default function AuthScreen() {
           </div>
         </div>
       </div>
-
-      {/* ─── Desktop (>= 1024px) ─── */}
-      <div className="hidden lg:flex h-full w-full">
+      ) : (
+      /* ─── Desktop (>= 1024px) ─── */
+      <div className="flex h-full w-full">
         {/* Left 65% — collages */}
         <div className="w-[65%] relative h-full overflow-hidden">
           <img
@@ -305,6 +319,7 @@ export default function AuthScreen() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
