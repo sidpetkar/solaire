@@ -43,6 +43,7 @@ export default function FilterStrip({ activeTab, activeLutId, onSelect, onClear,
   const genIdRef = useRef(0);
   const prevSrcRef = useRef<string | null>(null);
   const lastTapRef = useRef<{ id: string; time: number }>({ id: '', time: 0 });
+  const tapSeqRef = useRef(0);
 
   const srcKey = sourceImage?.src ?? null;
   if (srcKey !== prevSrcRef.current) {
@@ -136,8 +137,14 @@ export default function FilterStrip({ activeTab, activeLutId, onSelect, onClear,
 
     lastTapRef.current = { id: lut.id, time: now };
 
-    const parsed = await loadLUT(lut);
-    onSelect(lut, parsed);
+    const seq = ++tapSeqRef.current;
+    try {
+      const parsed = await loadLUT(lut);
+      if (tapSeqRef.current !== seq) return;
+      onSelect(lut, parsed);
+    } catch (e) {
+      console.warn('[FilterStrip] Failed to load LUT:', lut.id, e);
+    }
   }, [activeLutId, onSelect, onDoubleTapSelected]);
 
   const stripRef = useRef<HTMLDivElement>(null);
@@ -224,7 +231,7 @@ export default function FilterStrip({ activeTab, activeLutId, onSelect, onClear,
                 }`}
               >
                 <span
-                  className={`text-[8px] font-medium leading-tight text-center px-0.5 ${
+                  className={`text-[12px] font-medium leading-tight text-center px-0.5 ${
                     isActive ? 'text-surface' : 'text-white/70'
                   }`}
                 >

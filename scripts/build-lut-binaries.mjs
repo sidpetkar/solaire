@@ -261,13 +261,20 @@ const thumbChunks = [];
 let processed = 0;
 let skipped = 0;
 
+function sanitizeFilename(name) {
+  return name.replace(/\+/g, '_plus_');
+}
+
 for (const { cubeFile, brand } of allFiles) {
   const relToCube = path.relative(PUBLIC_DIR, cubeFile).replace(/\\/g, '/');
   const encodedPath = '/' + relToCube.split('/').map(s => encodeURIComponent(s)).join('/');
 
   const binRelPath = relToCube.replace(/\.cube$/, '.bin');
-  const binFullPath = path.join(BIN_DIR, path.relative('luts', binRelPath));
-  const binServePath = '/luts/bin/' + path.relative('luts', binRelPath).replace(/\\/g, '/');
+  const binRelSegments = path.relative('luts', binRelPath).replace(/\\/g, '/').split('/');
+  binRelSegments[binRelSegments.length - 1] = sanitizeFilename(binRelSegments[binRelSegments.length - 1]);
+  const safeBinRel = binRelSegments.join('/');
+  const binFullPath = path.join(BIN_DIR, safeBinRel);
+  const binServePath = '/luts/bin/' + safeBinRel;
   const encodedBinPath = binServePath.split('/').map(s => encodeURIComponent(s)).join('/');
 
   const filename = path.basename(cubeFile);
