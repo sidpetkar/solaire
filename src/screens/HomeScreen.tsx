@@ -12,7 +12,10 @@ import { useImageStore } from '../hooks/useImageStore';
 import { useFolderStore } from '../hooks/useFolderStore';
 import { useGreeting } from '../hooks/useGreeting';
 import { useAuth } from '../context/AuthContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { initLUTs } from '../engine/lutManager';
+import { FREE_IMAGE_LIMIT } from '../engine/lutTier';
+import PricingModal from '../components/PricingModal';
 import { SettingsDrawer } from './SettingsScreen';
 
 const SCROLL_HIDE_THRESHOLD = 10;
@@ -20,6 +23,7 @@ const SCROLL_HIDE_THRESHOLD = 10;
 export default function HomeScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isProUser } = useSubscription();
   const firstName = user?.displayName?.split(' ')[0] ?? null;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -39,6 +43,7 @@ export default function HomeScreen() {
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const selectMode = selectedIds.size > 0;
   const [showSettings, setShowSettings] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
 
   useEffect(() => { initLUTs(); }, []);
 
@@ -58,12 +63,21 @@ export default function HomeScreen() {
         navigate('/edit', { state: { imageUrl: url } });
       } else {
         const blobs = Array.from(files).filter((f) => f.type.startsWith('image/'));
+        if (blobs.length === 0) {
+          e.target.value = '';
+          return;
+        }
+        if (!isProUser && images.length + blobs.length > FREE_IMAGE_LIMIT) {
+          setShowPricing(true);
+          e.target.value = '';
+          return;
+        }
         if (blobs.length > 0) await importImages(blobs);
       }
 
       e.target.value = '';
     },
-    [navigate, importImages],
+    [navigate, importImages, isProUser, images.length],
   );
 
   const handleImportFolder = useCallback(async () => {
@@ -83,6 +97,10 @@ export default function HomeScreen() {
         }
 
         if (blobs.length > 0) {
+          if (!isProUser && images.length + blobs.length > FREE_IMAGE_LIMIT) {
+            setShowPricing(true);
+            return;
+          }
           const folderId = await createFolder(folderName);
           await importImages(blobs, folderId);
         }
@@ -92,7 +110,7 @@ export default function HomeScreen() {
     } else {
       dirInputRef.current?.click();
     }
-  }, [createFolder, importImages]);
+  }, [createFolder, importImages, isProUser, images.length]);
 
   const handleDirSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,11 +126,17 @@ export default function HomeScreen() {
       const firstPath = (files[0] as any).webkitRelativePath as string | undefined;
       const folderName = firstPath ? firstPath.split('/')[0] : 'Imported';
 
+      if (!isProUser && images.length + blobs.length > FREE_IMAGE_LIMIT) {
+        setShowPricing(true);
+        e.target.value = '';
+        return;
+      }
+
       const folderId = await createFolder(folderName);
       await importImages(blobs, folderId);
       e.target.value = '';
     },
-    [createFolder, importImages],
+    [createFolder, importImages, isProUser, images.length],
   );
 
   const handleDoubleTap = useCallback(
@@ -316,6 +340,8 @@ export default function HomeScreen() {
       {showSettings && (
         <SettingsDrawer onClose={() => setShowSettings(false)} />
       )}
+
+      <PricingModal open={showPricing} onClose={() => setShowPricing(false)} />
     </ScreenShell>
   );
 }

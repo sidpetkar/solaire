@@ -25,6 +25,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { applyWatermark } from '../engine/watermark';
 import { initLUTs, getLUTById, loadLUT } from '../engine/lutManager';
+import { premiumExportBlocked, canImportMoreImages } from '../engine/lutTier';
 import { DEFAULT_BLUR_PARAMS, type AdjustParams, type BlurParams } from '../engine/adjustments';
 import type { LUTMeta, ParsedLUT } from '../types';
 import type { EffectParams } from '../engine/effects';
@@ -52,7 +53,7 @@ export default function EditScreen() {
   const [sourceImg, setSourceImg] = useState<HTMLImageElement | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [lutsReady, setLutsReady] = useState(false);
-  const { saveImage, getFullImage, deleteImage } = useImageStore();
+  const { saveImage, getFullImage, deleteImage, images: libraryImages } = useImageStore();
   const { disabledCategories } = useCategoryPrefs();
   const prefsKey = disabledCategories.size;
   const { user, isGuest } = useAuth();
@@ -100,9 +101,11 @@ export default function EditScreen() {
 
   const activeEntry = history[historyIndex];
   const activeLutShortCode = activeEntry?.meta?.name ?? '';
+  const blockPremiumExport = premiumExportBlocked(activeEntry?.meta ?? null, isProUser);
 
   const state = location.state as { imageUrl?: string; imageId?: string } | null;
   const existingId = state?.imageId ?? undefined;
+  const blockLibraryFull = !isProUser && !existingId && !canImportMoreImages(isProUser, libraryImages.length);
   const { save: saveSession, load: loadSession } = useEditSession(existingId);
   const sessionRestored = useRef(false);
 
@@ -538,6 +541,10 @@ export default function EditScreen() {
   const handleSaveToApp = useCallback(async () => {
     if (aiEditing || aiLoading) return;
     setShowMenu(false);
+    if (blockPremiumExport || blockLibraryFull) {
+      setShowPricing(true);
+      return;
+    }
     const handle = canvasHandle.current;
     if (!handle?.renderer || !sourceImg) return;
     try {
@@ -550,10 +557,14 @@ export default function EditScreen() {
     } catch (err) {
       console.error('Save failed:', err);
     }
-  }, [activeLutId, saveImage, sourceImg, existingId, pushEditStateToCloud, aiEditing, aiLoading, showToast]);
+  }, [activeLutId, saveImage, sourceImg, existingId, pushEditStateToCloud, aiEditing, aiLoading, showToast, blockPremiumExport, blockLibraryFull]);
 
   const handleConfirmDownload = useCallback(async (withWatermark: boolean) => {
     setShowSaveModal(false);
+    if (blockPremiumExport || blockLibraryFull) {
+      setShowPricing(true);
+      return;
+    }
     const handle = canvasHandle.current;
     if (!handle?.renderer || !sourceImg) return;
     try {
@@ -573,21 +584,29 @@ export default function EditScreen() {
     } catch (err) {
       console.error('Save failed:', err);
     }
-  }, [activeLutId, saveImage, sourceImg, existingId, doWatermark, pushEditStateToCloud]);
+  }, [activeLutId, saveImage, sourceImg, existingId, doWatermark, pushEditStateToCloud, blockPremiumExport, blockLibraryFull]);
 
   const handleDownload = useCallback(() => {
     if (aiEditing || aiLoading) return;
     setShowMenu(false);
+    if (blockPremiumExport || blockLibraryFull) {
+      setShowPricing(true);
+      return;
+    }
     if (!doWatermark) {
       handleConfirmDownload(false);
       return;
     }
     setShowSaveModal(true);
-  }, [doWatermark, handleConfirmDownload, aiEditing, aiLoading]);
+  }, [doWatermark, handleConfirmDownload, aiEditing, aiLoading, blockPremiumExport, blockLibraryFull]);
 
   const handleMoveToFolder = useCallback(async (folder: FolderMeta) => {
     setShowFolderPicker(false);
     setShowMenu(false);
+    if (blockPremiumExport || blockLibraryFull) {
+      setShowPricing(true);
+      return;
+    }
     const handle = canvasHandle.current;
     if (!handle?.renderer) return;
     try {
@@ -602,7 +621,7 @@ export default function EditScreen() {
     } catch (err) {
       console.error('Move failed:', err);
     }
-  }, [activeLutId, saveImage, navigate, sourceImg, existingId]);
+  }, [activeLutId, saveImage, navigate, sourceImg, existingId, blockPremiumExport, blockLibraryFull]);
 
   const enterStrengthMode = useCallback(() => {
     if (!activeLutId) return;
@@ -1128,6 +1147,7 @@ export default function EditScreen() {
               sourceImage={sourceImg}
               lutsReady={lutsReady}
               prefsKey={prefsKey}
+              isProUser={isProUser}
             />
             <div className="border-t border-white/5">
               <div className="flex items-center justify-between md:justify-center md:gap-8 px-4 py-4 max-w-[600px] mx-auto">

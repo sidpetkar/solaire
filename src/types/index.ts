@@ -3,6 +3,8 @@ export interface ParsedLUT {
   data: Float32Array;
 }
 
+export type LutTier = 'free' | 'pro';
+
 export interface LUTMeta {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ export interface LUTMeta {
   path: string;
   binPath?: string | null;
   thumbIndex?: number;
+  tier: LutTier;
 }
 
 export type LUTCategory = string;

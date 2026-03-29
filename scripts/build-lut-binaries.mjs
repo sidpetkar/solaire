@@ -261,6 +261,17 @@ const thumbChunks = [];
 let processed = 0;
 let skipped = 0;
 
+/** Must match src/engine/lutTier.ts FREE_LUTS */
+const FREE_LUT_KEYS = new Set([
+  'Kodak|Portra 400', 'Kodak|Portra 160', 'Fuji|Superia 400', 'Kodak|Tri-X 400',
+  'Illford|HP 5 Plus 400', 'Fuji|Velvia 50', 'Kodak|Kodachrome 64', 'Fuji|Provia 100F',
+  'Kodak|2383 Constlclip', 'Fuji|3513 Constlclip', 'Kodak|Ektar 100', 'Illford|Delta 400',
+]);
+
+function manifestTier(brand, displayName) {
+  return FREE_LUT_KEYS.has(`${brand}|${displayName}`) ? 'free' : 'pro';
+}
+
 function sanitizeFilename(name) {
   return name.replace(/\+/g, '_plus_');
 }
@@ -298,6 +309,7 @@ for (const { cubeFile, brand } of allFiles) {
       thumbIndex: thumbChunks.length - 1,
       brand,
       displayName,
+      tier: manifestTier(brand, displayName),
     });
 
     processed++;
@@ -305,7 +317,10 @@ for (const { cubeFile, brand } of allFiles) {
   } catch (err) {
     skipped++;
     console.error(`\n  SKIP: ${relToCube} — ${err.message}`);
-    manifestEntries.push({ path: encodedPath, binPath: null, thumbIndex: -1, brand, displayName });
+    manifestEntries.push({
+      path: encodedPath, binPath: null, thumbIndex: -1, brand, displayName,
+      tier: manifestTier(brand, displayName),
+    });
   }
 }
 

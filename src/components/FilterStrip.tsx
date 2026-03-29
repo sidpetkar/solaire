@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { LockKey } from '@phosphor-icons/react';
 import {
   getAllLUTs, getLUTsByCategory, loadLUT,
   generateThumbnail, getThumbLUT, isThumbBundleReady,
@@ -14,6 +15,8 @@ interface Props {
   sourceImage?: HTMLImageElement | null;
   lutsReady?: boolean;
   prefsKey?: number;
+  /** Pro users see no lock; free users see lock on premium LUTs (preview still works). */
+  isProUser?: boolean;
 }
 
 const MAX_VISIBLE = 50;
@@ -37,7 +40,10 @@ function centerCropDataUrl(source: HTMLImageElement, size: number): string {
   return c.toDataURL('image/jpeg', 0.6);
 }
 
-export default function FilterStrip({ activeTab, activeLutId, onSelect, onClear, onDoubleTapSelected, sourceImage, lutsReady, prefsKey }: Props) {
+export default function FilterStrip({
+  activeTab, activeLutId, onSelect, onClear, onDoubleTapSelected, sourceImage, lutsReady, prefsKey,
+  isProUser = true,
+}: Props) {
   const [thumbnails, setThumbnails] = useState<Map<string, string>>(new Map());
   const [ogThumbUrl, setOgThumbUrl] = useState<string | null>(null);
   const genIdRef = useRef(0);
@@ -201,6 +207,7 @@ export default function FilterStrip({ activeTab, activeLutId, onSelect, onClear,
 
       {luts.map((lut) => {
         const isActive = activeLutId === lut.id;
+        const showLock = !isProUser && lut.tier === 'pro';
         return (
           <button
             key={lut.id}
@@ -213,6 +220,14 @@ export default function FilterStrip({ activeTab, activeLutId, onSelect, onClear,
               }`}
               style={{ width: THUMB_SIZE, height: THUMB_SIZE }}
             >
+              {showLock && (
+                <div
+                  className="absolute top-0.5 right-0.5 z-10 flex items-center justify-center rounded-full bg-amber-400 p-0.5 shadow-sm ring-1 ring-black/20"
+                  aria-hidden
+                >
+                  <LockKey size={14} weight="fill" className="text-[#1a1a1a]" />
+                </div>
+              )}
               {thumbnails.get(lut.id) ? (
                 <img
                   src={thumbnails.get(lut.id)}

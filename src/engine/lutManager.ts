@@ -2,6 +2,7 @@ import localforage from 'localforage';
 import { parseCube, parseBinary } from './cubeParser';
 import { WebGLRenderer } from './webgl';
 import { getDisabledCategories } from '../hooks/useCategoryPrefs';
+import { lutTierFor } from './lutTier';
 import type { ParsedLUT, LUTMeta } from '../types';
 
 const LUT_BASE = import.meta.env.VITE_LUT_BASE_URL || '';
@@ -159,6 +160,15 @@ interface ManifestEntry {
   thumbIndex?: number;
   brand?: string;
   displayName?: string;
+  tier?: 'free' | 'pro';
+}
+
+function sortFreeFirst(list: LUTMeta[]) {
+  list.sort((a, b) => {
+    const af = a.tier === 'free' ? 0 : 1;
+    const bf = b.tier === 'free' ? 0 : 1;
+    return af - bf;
+  });
 }
 
 async function doInit() {
@@ -199,6 +209,7 @@ async function doInit() {
 
       const name = entry.displayName ?? filename;
       const category = entry.brand ?? 'Uncategorized';
+      const tier = entry.tier ?? lutTierFor(category, name);
 
       const meta: LUTMeta = {
         id,
@@ -208,6 +219,7 @@ async function doInit() {
         path: entry.path,
         binPath: entry.binPath ?? null,
         thumbIndex: entry.thumbIndex ?? -1,
+        tier,
       };
 
       LUT_REGISTRY.push(meta);
@@ -218,6 +230,11 @@ async function doInit() {
         categoryIndex.set(category, bucket);
       }
       bucket.push(meta);
+    }
+
+    sortFreeFirst(LUT_REGISTRY);
+    for (const bucket of categoryIndex.values()) {
+      sortFreeFirst(bucket);
     }
 
     if (thumbBundlePromise) await thumbBundlePromise;

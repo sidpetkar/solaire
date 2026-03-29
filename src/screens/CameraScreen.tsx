@@ -8,13 +8,15 @@ import FolderTabs from '../components/FolderTabs';
 import FilterStrip from '../components/FilterStrip';
 import AspectRatioSelector from '../components/AspectRatioSelector';
 import ShutterButton from '../components/ShutterButton';
+import PricingModal from '../components/PricingModal';
 import { useCamera } from '../hooks/useCamera';
 import { useImageStore, downloadBlob } from '../hooks/useImageStore';
 import { shouldWatermark } from '../hooks/useWatermarkPref';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { applyWatermark } from '../engine/watermark';
-import { initLUTs } from '../engine/lutManager';
+import { initLUTs, getLUTById } from '../engine/lutManager';
+import { premiumExportBlocked, canImportMoreImages } from '../engine/lutTier';
 import { ASPECT_RATIOS } from '../types';
 import type { AspectRatio, LUTMeta, ParsedLUT } from '../types';
 
@@ -22,9 +24,9 @@ export default function CameraScreen() {
   const navigate = useNavigate();
   const canvasHandle = useRef<WebGLCanvasHandle>(null);
   const { videoRef, start, stop, switchCamera } = useCamera();
-  const { saveImage } = useImageStore();
+  const { saveImage, images: libraryImages } = useImageStore();
   const { user, isGuest } = useAuth();
-  const { tier } = useSubscription();
+  const { tier, isProUser } = useSubscription();
   const doWatermark = shouldWatermark(user?.email, isGuest, tier);
 
   const [activeTab, setActiveTab] = useState('all presets');
@@ -32,6 +34,7 @@ export default function CameraScreen() {
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9');
   const [captured, setCaptured] = useState(false);
   const [lutsReady, setLutsReady] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
 
   const activeLutRef = useRef<ParsedLUT | null>(null);
 
@@ -120,6 +123,11 @@ export default function CameraScreen() {
   const handleSave = useCallback(async () => {
     const handle = canvasHandle.current;
     if (!handle?.renderer) return;
+    const lutMeta = activeLutId ? getLUTById(activeLutId) : null;
+    if (premiumExportBlocked(lutMeta ?? null, isProUser) || !canImportMoreImages(isProUser, libraryImages.length)) {
+      setShowPricing(true);
+      return;
+    }
     try {
       const blob = await handle.renderer.toBlob();
       const id = await saveImage(blob, activeLutId ?? undefined);
@@ -135,7 +143,7 @@ export default function CameraScreen() {
     } catch (err) {
       console.error('Save failed:', err);
     }
-  }, [activeLutId, saveImage, navigate, doWatermark]);
+  }, [activeLutId, saveImage, navigate, doWatermark, isProUser, libraryImages.length]);
 
   const handleSwitchCamera = useCallback(async () => {
     const handle = canvasHandle.current;
@@ -187,6 +195,7 @@ export default function CameraScreen() {
           onClear={handleClearLUT}
           sourceImage={null}
           lutsReady={lutsReady}
+          isProUser={isProUser}
         />
         <AspectRatioSelector active={aspectRatio} onChange={setAspectRatio} />
 
@@ -208,6 +217,7 @@ export default function CameraScreen() {
           )}
         </div>
       </div>
+      <PricingModal open={showPricing} onClose={() => setShowPricing(false)} />
     </ScreenShell>
   );
 }
